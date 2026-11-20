@@ -26,6 +26,8 @@ original has its own repository and site; nothing here replaces it.
 | [`docs/INSTALL.md`](docs/INSTALL.md) | Requirements, installing, writing the DOS edition to a disk for a real PC, running in DOSBox, playing in a browser |
 | [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) | How the games work, source layout, building, testing, design notes, known limits |
 | [`CHANGELOG.md`](CHANGELOG.md) | Every change, in order |
+| [`docs/REAL-CRT.md`](docs/REAL-CRT.md) | How the flat game maps to a real, three-dimensional tube |
+| [`ROADMAP.md`](ROADMAP.md) | Where the project is going: CRT repair, electronics, fault tracing |
 | [`dos/README.md`](dos/README.md) | DOS edition: features, switches, what was tested |
 | [`original/README.md`](original/README.md) | The 1982 listing: transcription notes and credit |
 

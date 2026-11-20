@@ -170,3 +170,38 @@ being converged, seen from the side or rear with the front in a mirror.
   Enter, or a click on the text box, moves to the next step; step 4 ends only
   when the picture is fixed.
 - Fixed while testing: sprite choice crashed on level 0.
+
+## 2026-11-20: title screen, plain tutorial, stages, rings, real causes
+
+- **Title screen.** A painting of a television repair shop (a wood-cabinet set
+  showing a crosshatch, an oscilloscope, the technician's mirror, a multimeter,
+  valves), digitised to 320 x 200 in 256 colours with dithering. The logo
+  converges from three colours to white. The art is made by `tools/paint_title.py`:
+  a composed scene gone over with brush strokes by program. It is not painted
+  by hand; an image model was tried first and was not available.
+- **Tutorial rewritten in plain words.** Six short steps with no technical
+  terms: the three beams, white when they meet, a magnetised part splits them,
+  put a strip down, drag and flip it, done. Two steps are hands-on.
+- **Levels and stages.** Three levels of ten stages. Level 1 gives one strip,
+  level 2 two, level 3 three. New elements arrive inside each level: tighter
+  tolerance, a second and third picture, the squeeze ring (stage 1-6), the
+  shift ring (2-5), the purity ring and a purity target (3-1).
+- **Neck rings.** Squeeze (four-pole), shift (six-pole) and purity rings, each
+  -6 to +6, in a RINGS box. A ring changes every picture equally; a strip
+  changes only the beams that pass it.
+- **Every stage is checked.** `tools/find_seeds.js` runs the solver on each
+  stage and stores a layout that starts visibly broken and can be fixed with
+  that stage's strips and rings. All 30 have one.
+- **Less trial and error.** The strip under the pointer bends the beams before
+  it is placed, and while it is dragged. Arrows on each strip show how it
+  pushes each beam. A line at the bottom names the fault ("red high, blue low:
+  squeeze them together"). A tone rises as the beams close up.
+- **Obvious success.** A spot that would fix the set turns the strip green and
+  says so; a fixed set outlines its strips in green and turns the target mark green.
+- **The + and - have a reason.** The fault sources are now real parts on or
+  outside the glass (uneven yoke winding, magnetised bracket or shield,
+  loudspeaker magnet), each with a small + or - polarity mark as the nod to
+  the 1982 game. Their field now falls off with distance squared.
+- **Strips renamed** squeezer and mover; the technical names are in the notes.
+- Added `docs/REAL-CRT.md` (how the flat game maps to a real tube, what is true
+  and what is simplified) and `ROADMAP.md` (the repair-teaching direction).

@@ -35,6 +35,10 @@ libraries. Open the file to run it.
   step sequencer (`mStep`) scheduled 150 ms ahead on the audio clock; voices
   are built per note by `fm()` (carrier, modulator, two envelopes). `window.__mus`
   lets a test render it into an `OfflineAudioContext`.
+  Stages come from `cfg(stage)`; `SEEDS` holds the layout checked for each by
+  `tools/find_seeds.js` (run it again after any change to the physics or to
+  `cfg`). Fault parts are placed by `sitePart` on or outside the glass. The
+  title picture is made and embedded by `tools/paint_title.py --embed`.
 - **`v2/index.html`** integrates `du/dt = (q/m)(E + v x B)` with a relativistic
   Boris pusher, 420 steps a trace. Spot position against drive is tabulated per
   axis and inverted for S-correction. `window.__v2` exposes the state.
