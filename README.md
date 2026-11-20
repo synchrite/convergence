@@ -22,3 +22,25 @@ Scoring: evenness = 100 * (1 - (sum over bands of |hits - 1| + wall strikes) /
 all missing, is 0%.
 
 Open `index.html` in a browser; it has no dependencies.
+
+## New Version (`v2/index.html`)
+
+Linked from a large button in the corner of the classic page. It replaces the
+1982 steering law with standard physics and teaches as it goes:
+
+- Electron speed from the anode voltage, relativistic (gamma, fraction of c).
+- Electric plates and magnetic coils, integrated with a relativistic Boris
+  pusher (Lorentz force) through a small 8 inch tube: gun, plates or yoke,
+  neck, funnel, flat phosphor screen.
+- Real effects the beam runs into: it strikes its own plates, hits the neck
+  glass, overscans, and a flat screen stretches the edges by tan(theta). The
+  S-correction slider undoes the tan curve (100% gives 100% even coverage).
+- Magnetic deflection leaves speed unchanged (shown in the live readout).
+- Phosphor model: brightness rises with beam current and anode voltage^1.5,
+  spot size grows with current (simplified space-charge model), persistence,
+  and burn-in where far more than a uniform share of the beam lands.
+- Seven lessons, each with a "Try it" button that sets the controls.
+
+Simplifications: the two axes are tabulated one at a time (cross-coupling and
+corner effects are ignored), the anode is an instant accelerating step, and the
+phosphor and space-charge models are illustrative, not measured.

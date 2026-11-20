@@ -23,7 +23,12 @@ label{color:var(--dim)}
 #msg{min-height:1.5em;color:var(--fg)}
 .note{font-size:13px}
 a{color:var(--phos)}
+.newv{position:fixed;top:max(12px,env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px));z-index:20;display:block;padding:16px 28px;border-radius:14px;background:var(--phos);color:#03150a;font:700 clamp(20px,3.2vw,34px)/1.1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;text-decoration:none;box-shadow:0 0 0 2px rgba(109,255,154,.35),0 0 36px rgba(109,255,154,.45)}
+.newv small{display:block;font:500 clamp(11px,1.4vw,14px)/1.3 system-ui,sans-serif;opacity:.8;margin-top:4px}
+.newv:hover{filter:brightness(1.1)}.newv:focus-visible{outline:3px solid #fff;outline-offset:3px}
+main{padding-top:112px}
 </style></head><body>
+<a class="newv" href="v2/index.html">New Version &rarr;<small>real CRT physics, with lessons</small></a>
 <main>
 <h1>Charge! Phosphor</h1>
 <p>You are inside a cathode ray tube. The gun at the left fires 16 electrons. Charges in the vacuum bend each one (orange + pulls, blue - pushes). Land them <b>evenly</b> across the 16 bands of the phosphor on the right wall: one in every band. Two in a band over-drives it and leaves a burn.</p>

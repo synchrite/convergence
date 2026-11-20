@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Charge! Phosphor 2</title>
+<style>
+:root{--bg:#050807;--panel:#0b1210;--panel2:#0f1a16;--line:#1c2b25;--fg:#d9ece2;--dim:#86a395;--phos:#6dff9a;--hot:#ff9d5c;--cool:#5cb8ff;--bad:#ff6b5c;--warn:#ffd25c}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{margin:0;color:var(--fg);font:15px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:1180px;margin:0 auto;padding-block:22px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-size:26px;margin:0 0 4px;letter-spacing:.02em}
+h2{font-size:15px;margin:0 0 10px;color:var(--phos);text-transform:uppercase;letter-spacing:.1em;font-weight:600}
+p{margin:0 0 12px;color:var(--dim)}
+a{color:var(--phos)}
+.back{display:inline-block;margin-bottom:10px;font-size:14px}
+.grid{display:grid;gap:14px;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;min-width:0}
+canvas{display:block;width:100%;height:auto;border-radius:10px;background:#000}
+.stack{position:relative}.stack canvas+canvas{position:absolute;inset:0;pointer-events:none;background:transparent}
+.ctrl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px}
+@media (max-width:520px){.ctrl{grid-template-columns:minmax(0,1fr)}}
+.ctrl .full{grid-column:1/-1}
+label.s{display:block;font-size:13px;color:var(--dim)}
+label.s b{float:right;color:var(--fg);font:600 13px ui-monospace,Menlo,Consolas,monospace}
+input[type=range]{width:100%;accent-color:var(--phos)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{border:0;border-radius:0;background:var(--panel2);padding:7px 14px}
+.seg button[aria-pressed=true]{background:var(--phos);color:#02140a;font-weight:600}
+button{font:inherit;color:var(--fg);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 14px;cursor:pointer}
+button:hover{border-color:var(--phos)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--phos);outline-offset:2px}
+.meters{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:10px}
+.m{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.m span{display:block;font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+.m b{font:600 18px/1.25 ui-monospace,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums;color:var(--phos)}
+.m b.bad{color:var(--bad)}.m b.warn{color:var(--warn)}
+.read{font:13px/1.7 ui-monospace,Menlo,Consolas,monospace;color:var(--fg);margin:0;white-space:pre-wrap}
+.read i{color:var(--dim);font-style:normal}
+details{border-top:1px solid var(--line);padding:8px 0}
+details:first-of-type{border-top:0}
+summary{cursor:pointer;font-weight:600}
+details p{margin:8px 0 8px}
+details .try{margin-top:2px}
+.eq{font:13px ui-monospace,Menlo,Consolas,monospace;color:var(--fg);background:var(--panel2);border-radius:8px;padding:6px 10px;display:inline-block;margin:2px 0 8px}
+#note{min-height:1.5em;color:var(--warn);font-size:14px}
+.cred{font-size:13px}
+</style></head><body>
+<main>
+<a class="back" href="../index.html">&larr; Charge! Phosphor (the classic game)</a>
+<h1>Charge! Phosphor 2: steer a real electron beam</h1>
+<p>The classic game borrowed its physics from a 1982 magazine listing. Here the beam follows the physics of a real cathode ray tube: electrons accelerated by kilovolts, bent by electric plates or magnetic coils, integrated step by step with the Lorentz force. Your task is the same as before, scaled up: <b>cover the whole phosphor screen evenly</b> and keep the coating healthy. Every control has a lesson attached.</p>
+
+<div class="grid">
+  <section class="card" aria-label="Tube cutaway">
+    <h2>Inside the tube</h2>
+    <canvas id="tube" width="1000" height="560"></canvas>
+    <p class="cred" style="margin:8px 0 0">Side view (top panel, vertical deflection) and top view (bottom panel, horizontal deflection). Not to scale vertically. Dashed line: where the beam appears to come from.</p>
+  </section>
+  <section class="card" aria-label="Phosphor screen">
+    <h2>Phosphor screen</h2>
+    <div class="stack"><canvas id="scr" width="480" height="360"></canvas><canvas id="ovl" width="480" height="360"></canvas></div>
+    <div class="meters">
+      <div class="m"><span>Even coverage</span><b id="mEven">-</b></div>
+      <div class="m"><span>Lost to glass</span><b id="mLost">-</b></div>
+      <div class="m"><span>Coating health</span><b id="mHealth">100%</b></div>
+      <div class="m"><span>Brightness</span><b id="mBright">-</b></div>
+    </div>
+    <div id="note" role="status"></div>
+  </section>
+
+  <section class="card" aria-label="Controls">
+    <h2>Controls</h2>
+    <div class="ctrl">
+      <div class="full"><span class="seg" role="group" aria-label="Deflection type"><button id="bEs" aria-pressed="false">Electric plates</button><button id="bMg" aria-pressed="true">Magnetic coils</button></span>
+      &nbsp; <span class="seg" role="group" aria-label="Scan"><button id="sOff" aria-pressed="false">Dot</button><button id="sRas" aria-pressed="true">Raster</button><button id="sScope" aria-pressed="false">Scope</button></span></div>
+      <label class="s" for="va">Anode voltage <b id="vaV"></b></label><input id="va" type="range" min="1" max="30" step="0.5" value="12">
+      <label class="s" for="ib">Beam current <b id="ibV"></b></label><input id="ib" type="range" min="1" max="1000" step="1" value="150">
+      <label class="s" for="gx">Horizontal drive <b id="gxV"></b></label><input id="gx" type="range" min="-150" max="150" step="1" value="80">
+      <label class="s" for="gy">Vertical drive <b id="gyV"></b></label><input id="gy" type="range" min="-150" max="150" step="1" value="80">
+      <label class="s" for="sc">S-correction <b id="scV"></b></label><input id="sc" type="range" min="0" max="100" step="1" value="0">
+      <label class="s" for="pe">Phosphor persistence <b id="peV"></b></label><input id="pe" type="range" min="20" max="1500" step="10" value="220">
+      <div class="full"><label class="s" style="display:inline"><input type="checkbox" id="flare"> Flared plates</label> &nbsp; <button id="reset">Replace phosphor (reset burn)</button></div>
+    </div>
+    <p style="margin:12px 0 4px">Drive is in percent of the value a simple straight-line model says would reach the screen edge. In Dot mode the drives place the spot. In Raster mode they are scan amplitudes. In Scope mode they drive two sine waves.</p>
+    <h2 style="margin-top:14px">Live beam</h2>
+    <pre class="read" id="read"></pre>
+  </section>
+
+  <section class="card" aria-label="Lessons">
+    <h2>Lessons (each has a Try it)</h2>
+    <details open><summary>1. Volts become speed</summary>
+      <p>An electron falling through V volts gains kinetic energy eV. Non-relativistic that gives v = sqrt(2eV/m). At tens of kilovolts the speed is a good fraction of c, so the tube uses the relativistic form. Watch speed and gamma in Live beam.</p>
+      <div class="eq">(gamma - 1) m c^2 = e V</div><br><button class="try" data-try="speed">Try it: 30 kV</button>
+    </details>
+    <details><summary>2. Plates bend the path into a parabola</summary>
+      <p>Between the plates the force is constant and sideways, so the path is a parabola. After the plates it is a straight line that appears to start at the middle of the plates (dashed line). The spot moves in proportion to plate voltage and in inverse proportion to anode voltage: raise the anode voltage and you need more plate volts for the same deflection.</p>
+      <div class="eq">y = (L l / 2 d) (Vp / Va)</div><br><button class="try" data-try="plates">Try it: plates, dot</button>
+    </details>
+    <details><summary>3. The beam hits its own plates</summary>
+      <p>Inside the plates the beam is already off axis, so a big enough voltage steers it into the metal. Real oscilloscope tubes flare the plates outward and add post-deflection acceleration. Tick Flared plates and compare.</p>
+      <button class="try" data-try="strike">Try it: strike a plate</button>
+    </details>
+    <details><summary>4. Magnets bend without speeding up</summary>
+      <p>The magnetic force is always at right angles to the velocity, so it changes direction and never speed. Compare speed before and after in Live beam: unchanged. The path is a circular arc. Magnets reach larger angles than plates and need no electrodes in the beam, which is why televisions use them.</p>
+      <div class="eq">theta = e B Lb / p</div><br><button class="try" data-try="magnet">Try it: magnetic dot</button>
+    </details>
+    <details><summary>5. Flat screens stretch the edges</summary>
+      <p>With a flat screen the spot lands at l times tan(theta). Equal steps in angle then give bigger steps in position near the edges, so a plain sawtooth bunches the lines at the centre and stretches them outward (pincushion-style distortion). Real sets shape the drive into an S: slide S-correction up and watch the coverage meter. 100% undoes the tan curve exactly.</p>
+      <button class="try" data-try="scorr">Try it: even raster</button>
+    </details>
+    <details><summary>6. Neck shadow and overscan</summary>
+      <p>Too little drive leaves dark borders. Too much throws light onto the aquadag and glass, and a deflected beam can run into the narrow neck before it reaches the funnel (Lost to glass). Aim for the edge cells, not past them.</p>
+      <button class="try" data-try="over">Try it: overscan</button>
+    </details>
+    <details><summary>7. Spot size, brightness and burn-in</summary>
+      <p>Light output rises with beam current and, roughly, with anode voltage to the power 1.5. The same electrons also repel each other (space charge), so more current gives a bigger, softer spot (simplified model here). A bright dot that stays still deposits all that energy in one place and wears the phosphor out: that is burn-in, and the reason screen savers exist. Persistence is how long a spot keeps glowing after the beam leaves.</p>
+      <button class="try" data-try="burn">Try it: leave a bright dot</button>
+    </details>
+  </section>
+</div>
+<p class="cred" style="margin-top:14px">Descended from <i>Charge!</i> by C. Anthony Ray (BYTE, December 1982), whose 1/r charge-steering law and goal of landing the beam on a phosphor started this. This page uses its own, standard physics: relativistic Boris integration of the Lorentz force, simplified phosphor and space-charge models. Tube dimensions are for a small 8 inch set. The original listing runs at <a href="../original/index.html">original/index.html</a>.</p>
+</main>
+<script>
+(()=>{
+'use strict';
+const $=id=>document.getElementById(id);
+const QE=1.602176634e-19,ME=9.1093837015e-31,C=299792458;
+/* ---------- tube geometry (metres) ---------- */
+const G={z0:0.02,Ls:0.30,HX:0.10,HY:0.075,gap:0.01,
+  py:[0.10,0.13],px:[0.14,0.17],yoke:[0.12,0.20],neckR:0.0165,neckEnd:0.12,screenR:0.14};
+const radiusAt=z=>z<G.neckEnd?G.neckR:G.neckR+(G.screenR-G.neckR)*(z-G.neckEnd)/(G.Ls-G.neckEnd);
+/* ---------- state ---------- */
+const P={mode:'mag',scan:'ras',Va:12,Ib:150,gx:80,gy:80,sc:0,pe:220,flare:false};
+let tabX=null,tabY=null,tabKey='';
+let frame=null,lineNo=0,burn=new Float32Array(32*24),t0=performance.now(),lastT=t0,scopeT=0,note='';
+/* ---------- physics ---------- */
+function beamBasics(Va){const gam=1+QE*Va*1000/(ME*C*C),u=C*Math.sqrt(gam*gam-1);return{gam,u,v:u/gam,p:ME*u}}
+function fullScale(Va,axis){
+  const b=beamBasics(Va);
+  if(P.mode==='es'){
+    const [a,c]=axis==='y'?G.py:G.px,L=c-a,l=G.Ls-(a+c)/2,H=axis==='y'?G.HY:G.HX;
+    return H*2*G.gap*(Va*1000)/(L*l);
+  }
+  const lb=G.Ls-(G.yoke[0]+G.yoke[1])/2,Lb=G.yoke[1]-G.yoke[0],H=axis==='y'?G.HY:G.HX;
+  return (b.p/(QE*Lb))*(H/lb);
+}
+const halfGap=z=>{const a=G.py[0];const f=P.flare?1+2*Math.max(0,Math.min(1,(z-a)/(G.py[1]-a))):1;return G.gap/2*f};
+function halfGapX(z){const a=G.px[0];const f=P.flare?1+2*Math.max(0,Math.min(1,(z-a)/(G.px[1]-a))):1;return G.gap/2*f}
+// Relativistic Boris pusher. dx, dy are drive percentages.
+function trace(dx,dy,Va){
+  Va=Va??P.Va;
+  const b=beamBasics(Va);
+  let x=0,y=0,z=G.z0,ux=0,uy=0,uz=b.u;
+  const Vy=dy/100*fullScale(Va,'y'),Vx=dx/100*fullScale(Va,'x');
+  const steps=420,dz=(G.Ls-G.z0)/steps*1.0,dt=dz/b.v;
+  const pts=[[z,x,y]];let status='screen',speed0=b.v,speedEnd=b.v;
+  const k=QE*dt/(2*ME);
+  for(let n=0;n<steps*3;n++){
+    let Ex=0,Ey=0,Bx=0,By=0;
+    if(P.mode==='es'){
+      if(z>=G.py[0]&&z<=G.py[1])Ey=-Vy/(2*halfGap(z));
+      if(z>=G.px[0]&&z<=G.px[1])Ex=-Vx/(2*halfGapX(z));
+    }else if(z>=G.yoke[0]&&z<=G.yoke[1]){
+      Bx=-Vy;By=Vx; // Vy,Vx hold the field in tesla in magnetic mode
+    }
+    // half electric kick (charge -e)
+    ux+=-k*Ex;uy+=-k*Ey;
+    // rotation
+    const gm=Math.sqrt(1+(ux*ux+uy*uy+uz*uz)/(C*C));
+    const tx=-QE*dt/(2*gm*ME)*Bx,ty=-QE*dt/(2*gm*ME)*By,tz=0;
+    const t2=tx*tx+ty*ty+tz*tz,sx=2*tx/(1+t2),sy=2*ty/(1+t2),sz=0;
+    const cx=uy*tz-uz*ty,cy=uz*tx-ux*tz,cz=ux*ty-uy*tx;
+    const px=ux+cx,py=uy+cy,pz=uz+cz;
+    ux+=py*sz-pz*sy;uy+=pz*sx-px*sz;uz+=px*sy-py*sx;
+    ux+=-k*Ex;uy+=-k*Ey;
+    const g2=Math.sqrt(1+(ux*ux+uy*uy+uz*uz)/(C*C));
+    const nx=x+ux/g2*dt,ny=y+uy/g2*dt,nz=z+uz/g2*dt;
+    if(nz>=G.Ls){const t=(G.Ls-z)/(nz-z);x+=(nx-x)*t;y+=(ny-y)*t;z=G.Ls;pts.push([z,x,y]);speedEnd=Math.sqrt(ux*ux+uy*uy+uz*uz)/g2;break}
+    x=nx;y=ny;z=nz;pts.push([z,x,y]);speedEnd=Math.sqrt(ux*ux+uy*uy+uz*uz)/g2;
+    if(Math.hypot(x,y)>radiusAt(z)){status='glass';break}
+    if(P.mode==='es'){
+      if(z>=G.py[0]&&z<=G.py[1]&&Math.abs(y)>halfGap(z)){status='plate';break}
+      if(z>=G.px[0]&&z<=G.px[1]&&Math.abs(x)>halfGapX(z)){status='plate';break}
+    }
+  }
+  let hit=null;
+  if(status==='screen'){hit={x,y};if(Math.abs(x)>G.HX||Math.abs(y)>G.HY)status='overscan'}
+  return{pts,hit,status,speed0,speedEnd,basics:b,Vx,Vy};
+}
+/* Lookup tables: spot position (m) against drive (%), one axis at a time. */
+const DRV=[];for(let d=-150;d<=150;d+=5)DRV.push(d);
+function key(){return [P.mode,P.Va,P.flare].join('|')}
+function buildTables(){
+  const k=key();if(k===tabKey)return;tabKey=k;
+  const mk=axis=>DRV.map(d=>{
+    // drives are in percent; in magnetic mode trace() wants tesla
+    const r=P.mode==='es'?trace(axis==='x'?d:0,axis==='y'?d:0):traceMag(axis==='x'?d:0,axis==='y'?d:0);
+    return r.status==='screen'||r.status==='overscan'?(axis==='x'?r.hit.x:r.hit.y):null;
+  });
+  tabX=mk('x');tabY=mk('y');
+}
+function traceMag(dx,dy){return trace(dx,dy)}
+function lookup(tab,d){
+  const f=(d+150)/5,i=Math.floor(f);
+  if(i<0||i>=DRV.length-1)return null;
+  const a=tab[i],b=tab[i+1];if(a==null||b==null)return null;
+  return a+(b-a)*(f-i);
+}
+function inverse(tab,pos){
+  for(let i=0;i<DRV.length-1;i++){
+    const a=tab[i],b=tab[i+1];if(a==null||b==null)continue;
+    if((a<=pos&&pos<=b)||(b<=pos&&pos<=a)){const f=b===a?0:(pos-a)/(b-a);return DRV[i]+f*5}
+  }
+  return pos>0?150:-150;
+}
+/* ---------- raster frame ---------- */
+const COLS=16,ROWS=12,LINES=48,PER=64;
+function buildFrame(){
+  buildTables();
+  const pts=[],cells=new Float64Array(COLS*ROWS);let lost=0,valid=0;
+  for(let i=0;i<LINES;i++){
+    const v=((i+.5)/LINES)*2-1,row=[];
+    for(let j=0;j<PER;j++){
+      const u=((j+.5)/PER)*2-1;
+      let dx=u*P.gx,dy=v*P.gy;
+      if(P.sc>0){
+        const s=P.sc/100;
+        const px=u*P.gx/100*G.HX,py=v*P.gy/100*G.HY;
+        dx=(1-s)*dx+s*inverse(tabX,px);dy=(1-s)*dy+s*inverse(tabY,py);
+      }
+      const x=lookup(tabX,dx),y=lookup(tabY,dy);
+      if(x==null||y==null||Math.abs(x)>G.HX||Math.abs(y)>G.HY){lost++;row.push(null);continue}
+      const cx=Math.min(COLS-1,Math.floor((x+G.HX)/(2*G.HX)*COLS)),cy=Math.min(ROWS-1,Math.floor((y+G.HY)/(2*G.HY)*ROWS));
+      cells[cy*COLS+cx]++;valid++;row.push({x,y,c:cy*COLS+cx});
+    }
+    pts.push(row);
+  }
+  const N=LINES*PER,e=N/(COLS*ROWS);
+  let dev=lost;for(const c of cells)dev+=Math.abs(c-e);
+  const even=Math.max(0,100*(1-dev/(2*N*(1-1/(COLS*ROWS)))));
+  frame={pts,even,lost:lost/N,cells};
+}
+/* ---------- drawing: tube ---------- */
+const tv=$('tube'),tg=tv.getContext('2d');
+const ZS=860/ (G.Ls),M0=70; // px per metre along the axis
+const YS=1050,PANEL=280;
+function drawPanel(axis,y0,tr){
+  const cx=v=>M0+v*ZS,cy=v=>y0+PANEL/2-v*YS;
+  const sgn=axis==='y'?1:1;
+  // envelope
+  tg.save();
+  const poly=[];
+  for(let z=0;z<=G.Ls+1e-9;z+=0.005)poly.push([z,radiusAt(Math.max(z,0))]);
+  tg.beginPath();poly.forEach((p,i)=>i?tg.lineTo(cx(p[0]),cy(p[1])):tg.moveTo(cx(p[0]),cy(p[1])));
+  for(let i=poly.length-1;i>=0;i--)tg.lineTo(cx(poly[i][0]),cy(-poly[i][1]));tg.closePath();
+  const gl=tg.createLinearGradient(0,y0,0,y0+PANEL);gl.addColorStop(0,'rgba(80,160,140,.16)');gl.addColorStop(.5,'rgba(20,50,45,.10)');gl.addColorStop(1,'rgba(80,160,140,.16)');
+  tg.fillStyle=gl;tg.fill();tg.strokeStyle='rgba(120,200,180,.45)';tg.lineWidth=1.5;tg.stroke();
+  tg.restore();
+  // gun
+  tg.fillStyle='#26332e';tg.fillRect(cx(0),cy(0.007),cx(0.012)-cx(0),cy(-0.007)-cy(0.007));
+  const gg=tg.createRadialGradient(cx(0.004),cy(0),0,cx(0.004),cy(0),24);gg.addColorStop(0,'rgba(255,170,90,.9)');gg.addColorStop(1,'rgba(255,170,90,0)');
+  tg.fillStyle=gg;tg.fillRect(cx(0)-10,cy(0)-24,60,48);
+  tg.fillStyle='#37453f';tg.fillRect(cx(0.012),cy(0.004),cx(0.02)-cx(0.012),cy(-0.004)-cy(0.004));
+  // deflection hardware
+  if(P.mode==='es'){
+    const [a,b]=axis==='y'?G.py:G.px,hg=axis==='y'?halfGap:halfGapX;
+    for(const s of[1,-1]){
+      tg.strokeStyle=s*(tr?(axis==='y'?tr.Vy:tr.Vx):0)>0?'#ffb36b':'#7dc4ff';tg.lineWidth=5;tg.beginPath();
+      for(let z=a;z<=b+1e-9;z+=0.002){const yy=s*hg(z);z===a?tg.moveTo(cx(z),cy(yy)):tg.lineTo(cx(z),cy(yy))}
+      tg.stroke();
+    }
+    // the other pair seen edge-on
+    const [a2,b2]=axis==='y'?G.px:G.py;tg.strokeStyle='rgba(180,190,185,.5)';tg.lineWidth=3;
+    tg.beginPath();tg.moveTo(cx(a2),cy(0));tg.lineTo(cx(b2),cy(0));tg.stroke();
+  }else{
+    const [a,b]=G.yoke;
+    tg.fillStyle='rgba(205,125,70,.85)';
+    tg.fillRect(cx(a),cy(0.040),cx(b)-cx(a),10);tg.fillRect(cx(a),cy(-0.040)-10,cx(b)-cx(a),10);
+    tg.fillStyle='rgba(205,125,70,.3)';tg.fillRect(cx(a),cy(0.030),cx(b)-cx(a),cy(-0.030)-cy(0.030));
+    tg.fillStyle='#e6c9a6';tg.font='12px ui-monospace,Menlo,monospace';tg.textAlign='center';tg.fillText('yoke',cx((a+b)/2),cy(0.052));
+  }
+  // screen
+  tg.fillStyle='#143525';tg.fillRect(cx(G.Ls),cy(G.screenR),10,cy(-G.screenR)-cy(G.screenR));
+  tg.fillStyle='rgba(109,255,154,.35)';const half=axis==='y'?G.HY:G.HX;tg.fillRect(cx(G.Ls),cy(half),6,cy(-half)-cy(half));
+  tg.fillStyle='#6f8f80';tg.font='12px system-ui,sans-serif';tg.textAlign='left';
+  tg.fillText(axis==='y'?'SIDE VIEW (up/down)':'TOP VIEW (left/right)',M0,y0+16);
+  // beam
+  if(tr){
+    const q=i=>[cx(tr.pts[i][0]),cy(tr.pts[i][axis==='y'?2:1])];
+    tg.lineJoin='round';tg.lineCap='round';
+    for(const [w,al] of [[10,.08],[6,.16],[2.5,.95]]){
+      tg.strokeStyle=w>3?'rgba(120,190,255,'+al+')':'rgba(235,248,255,'+al+')';tg.lineWidth=w;tg.beginPath();
+      tr.pts.forEach((p,i)=>{const [X,Y]=q(i);i?tg.lineTo(X,Y):tg.moveTo(X,Y)});tg.stroke();
+    }
+    // apparent origin
+    const n=tr.pts.length;
+    if(n>6&&(tr.status==='screen'||tr.status==='overscan')){
+      const a=tr.pts[n-6],b=tr.pts[n-1],ax=axis==='y'?2:1;
+      const slope=(b[ax]-a[ax])/(b[0]-a[0]);
+      const mid=P.mode==='es'?(axis==='y'?(G.py[0]+G.py[1])/2:(G.px[0]+G.px[1])/2):(G.yoke[0]+G.yoke[1])/2;
+      tg.setLineDash([5,6]);tg.strokeStyle='rgba(255,255,255,.4)';tg.lineWidth=1;tg.beginPath();
+      tg.moveTo(cx(G.Ls),cy(b[ax]));tg.lineTo(cx(mid),cy(b[ax]-slope*(G.Ls-mid)));tg.stroke();tg.setLineDash([]);
+    }
+    if(tr.status!=='screen'){
+      const e=q(n-1);tg.fillStyle=tr.status==='overscan'?'#ffd25c':'#ff6b5c';tg.beginPath();tg.arc(e[0],e[1],6,0,7);tg.fill();
+    }
+  }
+  // axis tick for screen edges
+  tg.strokeStyle='rgba(255,255,255,.12)';tg.setLineDash([2,6]);tg.beginPath();tg.moveTo(M0,cy(0));tg.lineTo(cx(G.Ls),cy(0));tg.stroke();tg.setLineDash([]);
+}
+function drawTube(tr){
+  tg.setTransform(1,0,0,1,0,0);
+  const bg=tg.createLinearGradient(0,0,0,tv.height);bg.addColorStop(0,'#04100c');bg.addColorStop(1,'#020605');tg.fillStyle=bg;tg.fillRect(0,0,tv.width,tv.height);
+  drawPanel('y',0,tr);drawPanel('x',PANEL,tr);
+}
+/* ---------- drawing: phosphor ---------- */
+const sc=$('scr'),sg=sc.getContext('2d'),ov=$('ovl'),og=ov.getContext('2d');
+const SW=sc.width,SH=sc.height;
+const toPx=(x,y)=>[(x/G.HX+1)/2*SW,(1-(y/G.HY+1)/2)*SH];
+const cellOf=(x,y)=>{const cx=Math.min(31,Math.max(0,Math.floor((x+G.HX)/(2*G.HX)*32))),cy=Math.min(23,Math.max(0,Math.floor((y+G.HY)/(2*G.HY)*24)));return cy*32+cx};
+function brightness(){return (P.Ib/150)*Math.pow(P.Va/12,1.5)}
+function spotRadius(){return Math.max(0.9,1.2+7*Math.pow(P.Ib/1000,0.67)/Math.sqrt(P.Va/5))} // px, simplified space-charge model
+function drawOverlay(){
+  og.clearRect(0,0,SW,SH);
+  const cw=SW/32,ch=SH/24;
+  for(let i=0;i<768;i++){
+    const b=burn[i];if(b<0.02)continue;
+    og.fillStyle='rgba(70,35,10,'+Math.min(.85,b*.9)+')';og.fillRect((i%32)*cw,Math.floor(i/32)*ch,cw+.5,ch+.5);
+  }
+  // bezel shadow and screen-edge marks
+  const vg=og.createRadialGradient(SW/2,SH/2,SH*.45,SW/2,SH/2,SW*.62);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.5)');
+  og.fillStyle=vg;og.fillRect(0,0,SW,SH);
+}
+function plotSpots(list,bright,r){
+  const cellCount=new Map();
+  sg.globalCompositeOperation='lighter';
+  for(const s of list){
+    const c=cellOf(s.x,s.y);cellCount.set(c,(cellCount.get(c)||0)+1);
+    const att=1-0.85*Math.min(1,burn[c]);
+    const [px,py]=toPx(s.x,s.y);
+    const a=Math.min(1,.55*bright)*att;
+    const gr=sg.createRadialGradient(px,py,0,px,py,r*2.2);
+    gr.addColorStop(0,'rgba(190,255,215,'+a+')');gr.addColorStop(.35,'rgba(109,255,154,'+a*.6+')');gr.addColorStop(1,'rgba(40,200,100,0)');
+    sg.fillStyle=gr;sg.fillRect(px-r*2.3,py-r*2.3,r*4.6,r*4.6);
+  }
+  sg.globalCompositeOperation='source-over';
+  // burn accumulates where far more than a uniform share of the beam lands
+  const exp=list.length/768;
+  for(const [c,n] of cellCount){const ratio=n/exp;if(ratio>6)burn[c]=Math.min(1,burn[c]+1e-5*(ratio-6)*bright)}
+}
+/* ---------- readouts ---------- */
+const fmt=(x,d=3)=>Number(x).toPrecision(d);
+function live(){
+  const d=currentDrive();
+  return P.mode==='es'?trace(d.x,d.y):trace(d.x,d.y);
+}
+let scopeNow={x:0,y:0};
+function currentDrive(){
+  if(P.scan==='off')return{x:P.gx,y:P.gy};
+  if(P.scan==='scope')return scopeNow;
+  // raster: show the instantaneous beam position along the current line
+  const i=Math.min(LINES-1,lineNo%LINES),j=Math.floor(((performance.now()-t0)/40)%PER);
+  const u=((j+.5)/PER)*2-1,v=((i+.5)/LINES)*2-1;
+  return{x:u*P.gx,y:v*P.gy};
+}
+function updateRead(tr){
+  const b=tr.basics,mm=v=>(v*1000).toFixed(1)+' mm';
+  const fx=fullScale(P.Va,'x'),fy=fullScale(P.Va,'y');
+  const unit=P.mode==='es'?'V':'mT',sc_=P.mode==='es'?1:1000;
+  let predY=null;
+  // small-angle prediction for the vertical axis
+  if(P.mode==='es'){const L=G.py[1]-G.py[0],l=G.Ls-(G.py[0]+G.py[1])/2;predY=L*l/(2*G.gap)*(tr.Vy/(P.Va*1000))}
+  else{const Lb=G.yoke[1]-G.yoke[0],l=G.Ls-(G.yoke[0]+G.yoke[1])/2;predY=l*(QE*Math.abs(tr.Vy)*Lb/b.p)*Math.sign(tr.Vy)*-1*-1}
+  const sim=tr.hit?tr.hit.y:null;
+  const lines=[
+    'Electron speed      '+fmt(b.v/1e6,3)+' x10^6 m/s  ('+(b.v/C*100).toFixed(1)+'% of c)',
+    'Gamma               '+b.gam.toFixed(4)+'   kinetic energy '+P.Va+' keV',
+    'Speed after bending '+fmt(tr.speedEnd/1e6,3)+' x10^6 m/s'+(P.mode==='mag'?'   (unchanged)':''),
+    'Time in tube        '+((G.Ls-G.z0)/b.v*1e9).toFixed(1)+' ns',
+    (P.mode==='es'?'Plate voltage       Vx '+(tr.Vx).toFixed(0)+' V, Vy '+(tr.Vy).toFixed(0)+' V':'Coil field          Bx '+(tr.Vx*1000).toFixed(2)+' mT, By '+(tr.Vy*1000).toFixed(2)+' mT'),
+    'Beam power          '+(P.Va*1000*P.Ib*1e-6).toFixed(2)+' W   spot radius '+(spotRadius()/SW*2*G.HX*1000).toFixed(2)+' mm',
+    'Vertical, straight-line model '+(predY==null?'-':mm(predY))+'   simulated '+(sim==null?'(beam stopped)':mm(sim)),
+    'Status              '+({screen:'on the screen',overscan:'past the screen edge',glass:'stopped by the neck or funnel glass',plate:'struck a deflection plate'})[tr.status]
+  ];
+  $('read').textContent=lines.join('\n');
+  let n='';
+  if(tr.status==='plate')n='The beam hit a plate. Lower the drive, raise the anode voltage, or tick Flared plates.';
+  else if(tr.status==='glass')n='The beam ran into the glass before the screen. The neck is narrow: use less deflection.';
+  else if(tr.status==='overscan')n='The spot is past the edge of the phosphor.';
+  note=n;$('note').textContent=n;
+}
+/* ---------- UI ---------- */
+function syncLabels(){
+  $('vaV').textContent=P.Va+' kV';$('ibV').textContent=P.Ib+' µA';$('gxV').textContent=P.gx+'%';$('gyV').textContent=P.gy+'%';
+  $('scV').textContent=P.sc+'%';$('peV').textContent=P.pe+' ms';
+  $('bEs').setAttribute('aria-pressed',P.mode==='es');$('bMg').setAttribute('aria-pressed',P.mode==='mag');
+  $('sOff').setAttribute('aria-pressed',P.scan==='off');$('sRas').setAttribute('aria-pressed',P.scan==='ras');$('sScope').setAttribute('aria-pressed',P.scan==='scope');
+  $('flare').checked=P.flare;
+  for(const [id,k] of [['va','Va'],['ib','Ib'],['gx','gx'],['gy','gy'],['sc','sc'],['pe','pe']])$(id).value=P[k];
+}
+let dirty=true;
+function set(o){Object.assign(P,o);syncLabels();dirty=true}
+for(const [id,k] of [['va','Va'],['ib','Ib'],['gx','gx'],['gy','gy'],['sc','sc'],['pe','pe']])$(id).addEventListener('input',e=>set({[k]:+e.target.value}));
+$('bEs').onclick=()=>set({mode:'es'});$('bMg').onclick=()=>set({mode:'mag'});
+$('sOff').onclick=()=>set({scan:'off'});$('sRas').onclick=()=>set({scan:'ras'});$('sScope').onclick=()=>set({scan:'scope'});
+$('flare').onchange=e=>set({flare:e.target.checked});
+$('reset').onclick=()=>{burn.fill(0);drawOverlay();sg.clearRect(0,0,SW,SH);};
+const TRY={
+  speed:{Va:30,mode:'mag',scan:'off',gx:0,gy:0},
+  plates:{Va:3,mode:'es',scan:'off',flare:false,gx:30,gy:40},
+  strike:{Va:2,mode:'es',scan:'off',flare:false,gx:0,gy:100},
+  magnet:{Va:12,mode:'mag',scan:'off',gx:60,gy:80},
+  scorr:{Va:12,mode:'mag',scan:'ras',gx:100,gy:100,sc:100},
+  over:{Va:12,mode:'mag',scan:'ras',gx:140,gy:140,sc:0},
+  burn:{Va:15,mode:'mag',scan:'off',Ib:900,gx:20,gy:20}
+};
+document.querySelectorAll('.try').forEach(b=>b.addEventListener('click',()=>{sg.clearRect(0,0,SW,SH);set(TRY[b.dataset.try])}));
+/* ---------- main loop ---------- */
+function loop(now){
+  const dt=Math.min(100,now-lastT);lastT=now;
+  if(dirty){buildTables();buildFrame();dirty=false}
+  // phosphor fade
+  sg.fillStyle='rgba(0,0,0,'+(1-Math.exp(-dt/P.pe))+')';sg.fillRect(0,0,SW,SH);
+  const bright=brightness(),r=spotRadius()*SW/480;
+  let list=[];
+  if(P.scan==='ras'&&frame){
+    for(let k=0;k<6;k++){
+      const row=frame.pts[lineNo%LINES];lineNo++;
+      for(const p of row)if(p)list.push(p);
+    }
+    $('mEven').textContent=frame.even.toFixed(0)+'%';$('mEven').className=frame.even>=95?'':frame.even>=80?'warn':'bad';
+    $('mLost').textContent=(frame.lost*100).toFixed(0)+'%';$('mLost').className=frame.lost>0.05?'bad':'';
+    scopeNow=null;
+  }else if(P.scan==='scope'){
+    scopeT+=dt/1000;
+    for(let k=0;k<160;k++){
+      const t=scopeT+k/160*0.016;
+      const dx=P.gx*Math.sin(2*Math.PI*3*t*5),dy=P.gy*Math.sin(2*Math.PI*2*t*5+1.2);
+      const x=tabX?lookup(tabX,dx):null,y=tabY?lookup(tabY,dy):null;
+      if(x!=null&&y!=null&&Math.abs(x)<=G.HX&&Math.abs(y)<=G.HY)list.push({x,y});
+      if(k===159)scopeNow={x:dx,y:dy};
+    }
+    $('mEven').textContent='-';$('mLost').textContent='-';$('mEven').className='';$('mLost').className='';
+  }else{
+    const tr=trace(P.gx,P.gy);
+    if(tr.hit&&tr.status==='screen')list.push(tr.hit);
+    $('mEven').textContent='-';$('mLost').textContent=tr.status==='screen'?'0%':'beam lost';$('mEven').className='';$('mLost').className=tr.status==='screen'?'':'bad';
+  }
+  plotSpots(list,bright,r);
+  if((lineNo&7)===0||P.scan!=='ras')drawOverlay();
+  let mean=0;for(const b of burn)mean+=b;mean/=burn.length;
+  const health=100*(1-mean);$('mHealth').textContent=health.toFixed(1)+'%';$('mHealth').className=health>97?'':health>85?'warn':'bad';
+  $('mBright').textContent=(bright*100).toFixed(0)+'%';$('mBright').className=bright>2.2?'warn':'';
+  const tr=live();drawTube(tr);updateRead(tr);
+  requestAnimationFrame(loop);
+}
+syncLabels();drawOverlay();requestAnimationFrame(loop);
+window.__v2={P,trace,set,get frame(){return frame},get burn(){return burn},fullScale,buildFrame};
+})();
+</script>
+</body></html>
