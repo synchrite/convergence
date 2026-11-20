@@ -24,7 +24,7 @@ button[aria-pressed=true]{background:#14301f;border-color:var(--acc)}
 </style></head><body>
 <main>
 <h1>Charge! Convergence</h1>
-<p>Three electron beams, red, green and blue, leave the gun and have to meet at one point on the screen. Stray charges bend each beam by a different amount. Place magnetic convergence strips until the test dots at the right turn pure white. The first levels have one dot and one charge; later levels add dots, charges and a purity target.</p>
+<p>Three electron beams, red, green and blue, leave the gun and have to meet at one point on the screen. Stray charges bend each beam by a different amount. You are a technician standing behind a television with its back off. You cannot see the screen from here, so a mirror stands in front of the set, on the right. The picture in it has come apart into red, green and blue ghosts. Stick magnetic strips onto the tube until every character in the mirror snaps back into one sharp white picture. The first levels have one dot and one charge; later levels add dots, charges and a purity target.</p>
 <div class="mon crt" id="mon"><canvas id="c" width="320" height="200" tabindex="0" aria-label="Convergence puzzle, 320 by 200 VGA style display"></canvas></div>
 <div class="bar" role="toolbar" aria-label="Strip tools">
   <button id="bRot" title="Rotate the strip (R, or right click)">Rotate</button>
@@ -37,10 +37,11 @@ button[aria-pressed=true]{background:#14301f;border-color:var(--acc)}
   <button id="bPrev" title="Previous level">&lt; Level</button>
   <button id="bNext" title="Next level (N)">Level &gt;</button>
   <button id="bCrt" aria-pressed="true" title="Scanlines and vignette (F)">CRT filter</button>
+  <button id="bSnd" aria-pressed="true" title="Sound effects on or off">Sound</button>
 </div>
 <div id="msg" role="status"></div>
 <p class="keys">Mouse: click inside the tube to place a strip, drag a strip to move it, click a strip to remove it, right click or R to rotate. Click a test dot to see its three beams. Keys: R rotate, P polarity, T dipole or quadrupole, 1 2 3 strength (these change the strip under the cursor, or the next strip), Tab next dot, arrows and Space place by keyboard, U undo, C clear, A auto-place, N next level, F filter.</p>
-<p class="keys"><b>Reading the screen.</b> Only one set of three beams is drawn at a time: the ones aimed at the test dot marked with the arrow. The game moves the arrow to the worst dot; click a dot to choose one. A white dot is converged; colour fringes show which beam is off (red high, blue low). CONV is the spread between the three beams in pixels. PUR, on later levels, is how far the three together miss the white mark. A quadrupole strip pulls the outer beams together or apart; a dipole strip moves all three, which is how convergence and purity magnets work.</p>
+<p class="keys"><b>What you are looking at.</b> The big view is the set from behind and to one side: the electron gun and neck on the left with its coloured ring magnets, the copper deflection yoke, the glass funnel widening to the faceplate on the right, and the chassis below. The + and - marks are stray magnetic fields in the cabinet that bend the beams. On the far right is the mirror: it shows the front of the screen, reversed left to right, which is how convergence is really done, because the adjustments are at the back and the picture is at the front. Each character is drawn three times, once by each beam; when the beams land apart you see three coloured ghosts, and when they land together one white character that starts to dance. Only the three beams for the marked character are drawn: click a character to see its beams. CONV is the spread between the beams in pixels; PUR, on later levels, is how far the three together miss the white mark.</p>
 <p class="links">Descended from <i>Charge!</i> by C. Anthony Ray (BYTE, December 1982): the charges and their placement follow his listing. Other versions: <a href="classic/index.html">Charge! Phosphor</a>, <a href="v2/index.html">the physics lab</a>, <a href="original/index.html">the 1982 Applesoft listing</a>.</p>
 </main>
 <script>
@@ -173,27 +174,49 @@ function drawBackdrop(){
     fb[y*W+x]=(b>0?1:0)<<5|b;
   }
 }
+/* Half height of the glass envelope at x: neck, then funnel, then faceplate. */
+const tubeH=x=>x<36?15:x<212?15+(x-36)*58/176:73+Math.min(4,(x-212)/8);
 function drawTubeBg(){
-  // inside of the tube: very dark blue, a vignette, and a fine grid
+  // You stand behind the set with the back cover off. First the inside of the cabinet.
   for(let y=0;y<FH;y++)for(let x=0;x<FW;x++){
-    const dx=(x-FW/2)/(FW/2),dy=(y-FH/2)/(FH/2),v=1-0.5*(dx*dx+dy*dy),t=(BAY[(y&3)*4+(x&3)]+.5)/16;
-    const b=Math.min(3,Math.floor(Math.max(0,v)*0.9+t*0.6)),gr=0;
-    let c=(gr<<2)|b;
-    if(x%32===0||y%32===0)c=rgb(18,26,60);
+    const t=(BAY[(y&3)*4+(x&3)]+.5)/16,dx=(x-FW/2)/(FW/2),dy=(y-FH/2)/(FH/2),v=1-0.45*(dx*dx+dy*dy);
+    let c=(Math.min(2,Math.floor(v*1.5+t*.8))<<5)|(Math.min(1,Math.floor(v*.9+t*.5))<<2);   // dark brown
+    if(y<5||y>FH-6)c=((y+x*3)%7<2)?rgb(70,40,0):rgb(110,60,20);                                 // wooden cabinet top and bottom
     px(FX0+x,FY0+y,c);
   }
+  // chassis board along the bottom, with a few parts on it
+  for(let x=6;x<150;x++)for(let y=FH-16;y<FH-6;y++)px(FX0+x,FY0+y,((x+y)&7)===0?rgb(40,110,40):rgb(0,60,20));
+  [[14,10,12,rgb(40,40,60)],[34,6,8,rgb(160,110,40)],[48,6,8,rgb(160,110,40)],[70,14,18,rgb(60,60,70)],[96,5,6,rgb(200,60,40)],[108,5,6,rgb(60,90,200)],[124,10,10,rgb(40,40,60)]]
+    .forEach(([x,w,h,c])=>{rect(FX0+x,FY0+FH-16-h,w,h,c);for(let i=0;i<w;i++)px(FX0+x+i,FY0+FH-16-h,rgb(200,200,220))});
+  // the glass envelope
+  for(let x=0;x<FW;x++){
+    const h=tubeH(x),top=Math.round(80-h),bot=Math.round(80+h);
+    for(let y=top;y<=bot;y++){
+      const t=(BAY[(y&3)*4+(x&3)]+.5)/16,k=1-Math.abs(y-80)/(h+1);
+      px(FX0+x,FY0+y,(y===top||y===bot)?rgb(120,170,190):(Math.min(3,Math.floor(.5+k*1.1+t*.7))));   // dark blue vacuum, lighter glass edge
+    }
+    if(x>40&&x<210&&x%3===0){px(FX0+x,FY0+top+1,rgb(60,60,70));px(FX0+x,FY0+bot-1,rgb(60,60,70))}        // aquadag coating
+  }
+  for(let y=Math.round(80-tubeH(0));y<=80+tubeH(0);y++)px(FX0,FY0+y,rgb(120,170,190));
+  // ring magnets on the neck: purity, four-pole, six-pole
+  [[17,rgb(255,220,60)],[22,rgb(255,80,255)],[27,rgb(60,230,255)]].forEach(([x,c])=>{rect(FX0+x,FY0+80-21,3,6,c);rect(FX0+x,FY0+80+16,3,6,c)});
+  // deflection yoke round the start of the funnel
+  for(let x=38;x<60;x++){const h=Math.round(tubeH(x)),c=(x%3)?rgb(200,120,50):rgb(120,60,20);for(let k=2;k<12;k++){px(FX0+x,FY0+80-h-k,c);px(FX0+x,FY0+80+h+k,c)}}
+  // anode cap and its lead
+  {const x=150,y=Math.round(80-tubeH(150));for(let i=-3;i<=3;i++)for(let j=-2;j<=1;j++)px(FX0+x+i,FY0+y+j,rgb(160,40,30));for(let k=0;k<y-6;k++)px(FX0+x+Math.round(k*.6),FY0+y-3-k,rgb(160,40,30))}
+  if(!passed)text('REAR OF SET, BACK OFF',FX0+62,FY0+7,rgb(150,130,100));
   // frame
   for(let x=-1;x<=FW;x++){px(FX0+x,FY0-1,COL.frame);px(FX0+x,FY0+FH,COL.frame)}
   for(let y=-1;y<=FH;y++){px(FX0-1,FY0+y,COL.frame);px(FX0+FW,FY0+y,COL.frame)}
 }
 function drawGun(){
-  rect(FX0,FY0+GUN.y-14,7,28,COL.metal);rect(FX0+7,FY0+GUN.y-12,3,24,rgb(80,90,110));
+  rect(FX0+1,FY0+GUN.y-13,6,26,COL.metal);rect(FX0+7,FY0+GUN.y-12,3,24,rgb(80,90,110));
   for(const o of OFF){rect(FX0+9,FY0+GUN.y+o-1,3,3,rgb(255,200,120));addLight(FX0+12,FY0+GUN.y+o,1,.6,.2)}
 }
 function drawGrille(){
   // aperture grille wall: R, G, B stripes with a pitch of six pixels
   const cols=[rgb(110,20,20),rgb(20,110,20),rgb(20,30,140)];
-  for(let y=0;y<FH;y++){const c=cols[Math.floor(y/2)%3];for(let x=FW-4;x<FW;x++)px(FX0+x,FY0+y,x===FW-4?COL.frame:c)}
+  for(let y=Math.round(80-tubeH(FW-1))+1;y<80+tubeH(FW-1);y++){const c=cols[Math.floor(y/2)%3];for(let x=FW-4;x<FW;x++)px(FX0+x,FY0+y,x===FW-4?rgb(120,170,190):c)}
 }
 function ring(cx,cy,r,c,fill){
   for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){const d=x*x+y*y;if(d<=r*r&&d>=(r-1.4)*(r-1.4))px(cx+x,cy+y,c);else if(fill!=null&&d<(r-1.4)*(r-1.4))px(cx+x,cy+y,fill)}
@@ -223,6 +246,40 @@ function stripPix(s,alpha){
   for(let n=0;n<s.str;n++)px(FX0+Math.round(s.x)-2+n*2,FY0+Math.round(s.y),COL.white);
 }
 const BEAM=[[1,0,0],[0,1,0],[0,0,1]];
+/* the pictures the player is fixing: 11 x 8 sprites, one per test dot */
+const SPR=[
+ ['..#.....#..','...#...#...','..#######..','.##.###.##.','###########','#.#######.#','#.#.....#.#','...##.##...'],  // invader
+ ['..##...##..','.####.####.','###########','###########','.#########.','..#######..','...#####...','.....#.....'],  // heart
+ ['..#######..','.#.......#.','#..##.##..#','#.........#','#.#.....#.#','#..#####..#','.#.......#.','..#######..'],  // face
+ ['.....#.....','....###....','###########','.#########.','..#######..','..###.###..','.##.....##.','.#.......#.'],  // star
+ ['...#####...','.#########.','##..###..##','##..###..##','###########','###########','###########','#.##.#.##.#']   // ghost
+];
+/* sound: small synthesised effects, started by the first click or key */
+let actx=null,soundOn=true;
+function audio(){if(!actx){try{actx=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(actx&&actx.state==='suspended')actx.resume()}
+function beep(f,d,type,vol,when,slide){
+  if(!actx||!soundOn)return;
+  const t=actx.currentTime+(when||0),o=actx.createOscillator(),g=actx.createGain();
+  o.type=type||'square';o.frequency.setValueAtTime(f,t);if(slide)o.frequency.exponentialRampToValueAtTime(slide,t+d);
+  g.gain.setValueAtTime(vol||.08,t);g.gain.exponentialRampToValueAtTime(.0008,t+d);
+  o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+d+.02);
+}
+const sfx={
+  place:()=>{beep(220,.07,'square',.07);beep(440,.05,'square',.05,.04)},
+  remove:()=>beep(180,.12,'sawtooth',.06,0,70),
+  turn:()=>beep(660,.03,'square',.04),
+  lock:n=>{const f=[523,659,784,988,1175][n%5];beep(f,.12,'triangle',.12);beep(f*2,.18,'sine',.08,.06)},
+  lose:()=>beep(200,.1,'sawtooth',.04,0,120),
+  win:()=>{[523,659,784,1047,1319,1568].forEach((f,i)=>beep(f,.16,'square',.07,i*.09));beep(2093,.5,'triangle',.08,.56)}
+};
+/* sparks */
+let parts=[];
+function burst(x,y,n,col){for(let i=0;i<n;i++){const a=Math.random()*6.283,v=.4+Math.random()*1.8;parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-.4,life:18+Math.random()*22,c:col||[1,1,1]})}}
+function drawParts(){
+  for(const q of parts){q.x+=q.vx;q.y+=q.vy;q.vy+=.05;q.life--;const k=Math.min(1,q.life/14);addLight(Math.round(q.x),Math.round(q.y),q.c[0]*k,q.c[1]*k,q.c[2]*k)}
+  parts=parts.filter(q=>q.life>0);
+}
+let wasOk=[],winT=0,lastStars=0;
 function drawBeams(ev){
   ev.rows.forEach((row,ri)=>{
     const on=ri===active;
@@ -244,33 +301,45 @@ function drawBeams(ev){
       // landing flash on the grille
       if(row.ys[bi]!=null){const ly=Math.round(row.ys[bi]);for(let k=-1;k<=1;k++)for(let xx=FW-8;xx<FW;xx++)addLight(FX0+xx,FY0+ly+k,col[0]*(k?.35:1),col[1]*(k?.35:1),col[2]*(k?.35:1))}
     }
+    // electrons streaming down the active beams
+    for(let bi=0;bi<3;bi++){const p=row.b[bi].pts,L=p.length-1;if(L<2)continue;
+      for(let k=0;k<5;k++){const f=((tick*.45+k*L/5+bi*2)%L),i=Math.floor(f),t=f-i,x=p[i][0]+(p[i+1][0]-p[i][0])*t,y=p[i][1]+(p[i+1][1]-p[i][1])*t;
+        if(x>=0&&x<FW&&y>=0&&y<FH){const X=FX0+Math.round(x),Y=FY0+Math.round(y);addLight(X,Y,.9,.9,.9);addLight(X-1,Y,.35,.35,.35);addLight(X+1,Y,.35,.35,.35)}}}
     // target mark for the active dot
     for(let k=0;k<4;k++){px(FX0+FW-14-k,FY0+row.ay-k,COL.white);px(FX0+FW-14-k,FY0+row.ay+k,COL.white)}
   });
 }
 function drawPanel(ev,tick){
-  text('SCREEN',266,20,COL.ui);text('TEST',266,28,COL.dim);
   const n=ev.rows.length,y0=38+(5-n)*14;
+  // the mirror in front of the set: this is how the technician sees the screen from behind
+  text('MIRROR',270,21,COL.ui);
+  {const t=y0-5,b=y0+n*28+2;rect(262,t,58,b-t,rgb(150,160,180));rect(263,t+1,56,b-t-2,rgb(40,50,70));
+   for(let k=0;k<3;k++){px(262+k,t+k,COL.white)}
+   rect(270,b,3,180-b,rgb(110,110,130));rect(309,b,3,180-b,rgb(110,110,130));rect(266,178,50,2,rgb(110,110,130));}
   ev.rows.forEach((row,i)=>{
-    const top=y0+i*28,cx=300,cy=top+12,ok=row.conv<=CONV_TOL&&(PUR_TOL==null||row.pur<=PUR_TOL);
-    rect(264,top-1,55,26,rgb(8,12,32));
-    for(let x=264;x<319;x++){px(x,top-1,ok?rgb(40,150,70):COL.frame);px(x,top+25,ok?rgb(40,150,70):COL.frame)}
-    text(row.conv>=40?'MISS':row.conv.toFixed(1),267,top+2,ok?COL.ok:COL.bad);
-    if(PUR_TOL!=null)text(row.pur>=40?'':'P'+row.pur.toFixed(0),267,top+13,row.pur<=PUR_TOL?COL.dim:COL.warn);
-    if(i===active&&n>1){for(let k=0;k<5;k++)for(let j=-k;j<=k;j++)px(262-4+k,cy+j,COL.white)}
-    if(row.ys.every(v=>v!=null)){
-      const cen=(row.ys[0]+row.ys[1]+row.ys[2])/3;
-      for(let bi=0;bi<3;bi++){
-        const off=Math.max(-9,Math.min(9,(row.ys[bi]-cen)*3)),col=BEAM[bi];
-        for(let y=-6;y<=6;y++)for(let x=-6;x<=6;x++){
-          const d=Math.sqrt(x*x+y*y);if(d>5.6)continue;
-          const k=d<4?1:0.5,X=cx+x,Y=Math.round(cy+off+y);
-          if(Y<top||Y>top+23)continue;
-          addLight(X,Y,col[0]*k,col[1]*k,col[2]*k);
-        }
-      }
+    const top=y0+i*28,ok=row.conv<=CONV_TOL&&(PUR_TOL==null||row.pur<=PUR_TOL);
+    rect(264,top-1,55,26,ok?rgb(6,26,14):rgb(8,12,32));
+    for(let x=264;x<319;x++){px(x,top-1,ok?rgb(40,200,90):COL.frame);px(x,top+25,ok?rgb(40,200,90):COL.frame)}
+    // lamp
+    for(let y=-2;y<=2;y++)for(let x=-2;x<=2;x++)if(x*x+y*y<=5)px(270+x,top+12+y,ok?rgb(60,255,110):rgb(255,70,60));
+    if(i===active&&n>1){for(let k=0;k<5;k++)for(let j=-k;j<=k;j++)px(258+k,top+12+j,COL.white)}
+    // the sprite: each gun draws its own copy, displaced by that gun's landing error
+    const sp=SPR[(i+level-1)%SPR.length],sx=280+(ok&&Math.floor(tick/18)%2?1:0),sy=top+1;
+    const cen=row.ys.every(v=>v!=null)?(row.ys[0]+row.ys[1]+row.ys[2])/3:0;
+    for(let bi=0;bi<3;bi++){
+      const off=row.ys[bi]==null?(bi-1)*9:ok?0:Math.max(-10,Math.min(10,Math.round((row.ys[bi]-cen)*3))),col=BEAM[bi];   // within tolerance: it snaps to white
+      const xo=row.ys[bi]==null?(bi-1)*4:0;
+      for(let r=0;r<8;r++)for(let c=0;c<11;c++)if(sp[r][10-c]==='#')   // reversed, as in a mirror
+        for(let a=0;a<3;a++)for(let d=0;d<3;d++){const X=sx+xo+c*3+d,Y=sy+off+r*3+a;if(Y>=top&&Y<=top+24&&X<319)addLight(X,Y,col[0],col[1],col[2])}
     }
+    // events: a dot that has just converged, or just been lost
+    if(wasOk[i]!==undefined&&ok!==wasOk[i]&&!searching){
+      if(ok){sfx.lock(ev.rows.filter((r,j)=>j<=i||true).filter(r=>r.conv<=CONV_TOL).length-1);burst(292,top+12,16,[.6,1,.7]);if(row.ys[1]!=null)burst(FX0+FW-4,FY0+row.ys[1],12,[1,1,1])}
+      else sfx.lose();
+    }
+    wasOk[i]=ok;
   });
+  wasOk.length=n;
 }
 function drawHud(ev){
   rect(0,0,W,16,rgb(10,16,46));
@@ -282,7 +351,7 @@ function drawHud(ev){
   rect(0,182,W,18,rgb(10,16,46));
   const names=['0','45','90','135'];
   text('TOOL: '+(tool.kind==='D'?'DIPOLE':'QUAD')+'  '+(tool.pol>0?'+':'-')+'  STR '+tool.str+'  ROT '+names[tool.rot],6,184,COL.ui);
-  const m=passed?'CONVERGED! PRESS N FOR THE NEXT LEVEL':AIMS.length===1?'MAKE THE TEST DOT WHITE':'MAKE ALL '+AIMS.length+' TEST DOTS WHITE';
+  const m=passed?'PICTURE FIXED! ENTER FOR THE NEXT LEVEL':AIMS.length===1?'DRAG STRIPS IN UNTIL THE MIRROR PICTURE IS SHARP':'MAKE ALL '+AIMS.length+' MIRROR PICTURES SHARP AND WHITE';
   text(m,6,192,passed?COL.ok:COL.dim);
 }
 let tick=0;
@@ -303,10 +372,12 @@ function frame(){
   for(const s of strips)stripPix(s,1);
   if(cursor&&!drag&&hit(cursor)<0&&strips.length<budget()&&inField(cursor))stripPix({x:cursor.x,y:cursor.y,a:tool.rot*Math.PI/4,pol:tool.pol,kind:tool.kind,str:tool.str},.55);
   drawIons();drawGun();drawBeams(ev);drawPanel(ev,tick);
-  if(passed)banner();
+  drawParts();
+  if(passed){banner();const sx=FX0+FW/2-34;for(let i=0;i<3;i++)text('*',sx+i*26,FY0+30,i<lastStars?rgb(255,220,60):rgb(60,60,90),3,rgb(0,0,0));
+    if(tick%7===0)burst(FX0+20+Math.random()*(FW-40),FY0+20+Math.random()*40,3,[Math.random(),Math.random(),Math.random()])}
   drawHud(ev);
   flip();
-  if(passed&&!frame.reported){frame.reported=true;const stars=usedAuto?0:strips.length<=Math.max(1,budget()-2)?3:strips.length<budget()?2:1;saveStars(stars);say('Converged with '+strips.length+' strips. '+(usedAuto?'Auto-placed, no stars.':'Stars: '+'*'.repeat(stars)+' of 3.')+' Press N for the next level.')}
+  if(passed&&!frame.reported){frame.reported=true;const stars=usedAuto?0:strips.length<=Math.max(1,budget()-2)?3:strips.length<budget()?2:1;lastStars=stars;sfx.win();for(let i=0;i<5;i++)burst(FX0+30+i*48,FY0+50,14,[1,.9,.4]);saveStars(stars);say('Picture fixed with '+strips.length+' strips. '+(usedAuto?'Auto-placed, no stars.':'Stars: '+'*'.repeat(stars)+' of 3.')+' Press Enter or N for the next level.')}
   if(!passed)frame.reported=false;
   requestAnimationFrame(frame);
 }
@@ -319,7 +390,7 @@ function place(p){
   if(!inField(p))return;
   if(strips.length>=budget()){say('No strips left. Drag one to move it, or click it to remove it.');return}
   strips.push({x:Math.round(p.x),y:Math.round(p.y),a:tool.rot*Math.PI/4,rot:tool.rot,pol:tool.pol,kind:tool.kind,str:tool.str});
-  say('Strip placed. Drag it to move it. R, P, T and 1 2 3 change the strip under the cursor.');
+  sfx.place();say('Strip placed. Drag it to move it. R, P, T, 1 2 3 or the mouse wheel change the strip under the cursor.');
 }
 function panelRow(p){ // p in field coordinates; the test column is right of the tube
   const X=p.x+FX0,Y=p.y+FY0,n=AIMS.length,y0=38+(5-n)*14;
@@ -329,20 +400,21 @@ function panelRow(p){ // p in field coordinates; the test column is right of the
 cv.addEventListener('pointermove',e=>{cursor=pos(e);if(drag){const s=strips[drag.i];if(Math.abs(cursor.x-drag.x0)+Math.abs(cursor.y-drag.y0)>2)drag.moved=true;if(drag.moved){s.x=Math.max(0,Math.min(FW-1,Math.round(cursor.x-drag.dx)));s.y=Math.max(0,Math.min(FH-1,Math.round(cursor.y-drag.dy)))}}});
 cv.addEventListener('pointerleave',()=>{cursor=null});
 cv.addEventListener('pointerdown',e=>{
-  if(e.button===2)return;cursor=pos(e);cv.focus();
+  audio();if(e.button===2)return;cursor=pos(e);cv.focus();
   const r=panelRow(cursor);if(r>=0){active=r;pinned=true;say('Showing the beams for test dot '+(r+1)+'.');return}
   const h=hit(cursor);
   if(h>=0){drag={i:h,x0:cursor.x,y0:cursor.y,dx:cursor.x-strips[h].x,dy:cursor.y-strips[h].y,moved:false};try{cv.setPointerCapture(e.pointerId)}catch(x){}return}
   place(cursor);
 });
-cv.addEventListener('pointerup',()=>{if(drag){if(!drag.moved){strips.splice(drag.i,1);say('Strip removed.')}drag=null}});
+cv.addEventListener('pointerup',()=>{if(drag){if(!drag.moved){strips.splice(drag.i,1);sfx.remove();say('Strip removed.')}drag=null}});
 cv.addEventListener('contextmenu',e=>{e.preventDefault();rotate()});
+cv.addEventListener('wheel',e=>{const h=under();const cur=h>=0?strips[h].str:tool.str,n=Math.max(1,Math.min(3,cur+(e.deltaY<0?1:-1)));if(n!==cur)str(n);e.preventDefault()},{passive:false});
 const say=t=>{msg=t;$('msg').textContent=t};
 const under=()=>cursor?hit(cursor):-1;   // tool keys act on the strip under the cursor, if any
-function rotate(){const h=under();if(h>=0){const s=strips[h];s.rot=((s.rot||0)+1)%4;s.a=s.rot*Math.PI/4;tool.rot=s.rot}else tool.rot=(tool.rot+1)%4;sync()}
-function pol(){const h=under();if(h>=0){strips[h].pol*=-1;tool.pol=strips[h].pol}else tool.pol*=-1;sync()}
-function kind(){const h=under();if(h>=0){strips[h].kind=strips[h].kind==='D'?'Q':'D';tool.kind=strips[h].kind}else tool.kind=tool.kind==='D'?'Q':'D';sync()}
-function str(n){const h=under();if(h>=0){strips[h].str=n||(strips[h].str%3)+1;tool.str=strips[h].str}else tool.str=n||(tool.str%3)+1;sync()}
+function rotate(){sfx.turn();const h=under();if(h>=0){const s=strips[h];s.rot=((s.rot||0)+1)%4;s.a=s.rot*Math.PI/4;tool.rot=s.rot}else tool.rot=(tool.rot+1)%4;sync()}
+function pol(){sfx.turn();const h=under();if(h>=0){strips[h].pol*=-1;tool.pol=strips[h].pol}else tool.pol*=-1;sync()}
+function kind(){sfx.turn();const h=under();if(h>=0){strips[h].kind=strips[h].kind==='D'?'Q':'D';tool.kind=strips[h].kind}else tool.kind=tool.kind==='D'?'Q':'D';sync()}
+function str(n){sfx.turn();const h=under();if(h>=0){strips[h].str=n||(strips[h].str%3)+1;tool.str=strips[h].str}else tool.str=n||(tool.str%3)+1;sync()}
 function undo(){strips.pop();say('Last strip removed.')}
 function clear(){strips=[];usedAuto=false;say('All strips removed.')}
 async function auto(){
@@ -354,7 +426,7 @@ async function auto(){
 }
 function go(L){
   level=Math.max(1,L);try{location.hash='level-'+level}catch(e){}
-  genLevel(level);frame.reported=false;say(intro());
+  genLevel(level);frame.reported=false;wasOk=[];parts=[];say(intro());
 }
 function intro(){
   const t=['One charge pulls the three beams apart. Put a QUADRUPOLE strip (T) across the beams, near the gun. If the colours spread further, flip it (P).',
@@ -374,10 +446,13 @@ $('bRot').onclick=rotate;$('bPol').onclick=pol;$('bKind').onclick=kind;$('bStr')
 $('bUndo').onclick=undo;$('bClear').onclick=clear;$('bAuto').onclick=auto;
 $('bNext').onclick=()=>go(level+1);$('bPrev').onclick=()=>go(level-1);
 $('bCrt').onclick=()=>{const m=$('mon');m.classList.toggle('crt');$('bCrt').setAttribute('aria-pressed',m.classList.contains('crt'))};
-document.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>b.blur()));
+$('bSnd').onclick=()=>{audio();soundOn=!soundOn;$('bSnd').setAttribute('aria-pressed',soundOn);if(soundOn)sfx.turn()};
+document.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{audio();b.blur()}));
 window.addEventListener('keydown',e=>{
   if(e.ctrlKey||e.metaKey||e.altKey)return;
+  audio();
   const k=e.key.toLowerCase();
+  if(k==='enter'&&passed&&document.activeElement.tagName!=='BUTTON'){go(level+1);return}
   if(k==='r')rotate();else if(k==='p')pol();else if(k==='t')kind();else if(k==='s')str();
   else if(k==='1'||k==='2'||k==='3')str(+k);
   else if(k==='u')undo();else if(k==='c')clear();else if(k==='a')auto();else if(k==='n')go(level+1);

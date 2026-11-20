@@ -113,3 +113,25 @@ on screen at once were confusing.
   Each of the first five levels opens with one line of advice.
 - Stars now depend on strips used against the level's budget.
 - The DOS edition is unchanged by this.
+
+## 2026-11-20: browser edition made more fun, and seen from behind the set
+
+Feedback: make it fun, and make the playfield look like a real television
+being converged, seen from the side or rear with the front in a mirror.
+
+- **A picture to fix.** Each test dot is now a small pixel-art character (invader,
+  heart, face, star, ghost), drawn once by each beam. Misconverged, it is three
+  coloured ghosts; within tolerance it snaps to one white character and dances.
+- **The technician's view.** The playfield is the set from behind with the back
+  off: gun and neck with purity, four-pole and six-pole ring magnets, the
+  copper deflection yoke, the glass funnel and faceplate, the anode lead, and
+  the chassis board. The picture is seen in a mirror on a stand in front of
+  the set, reversed left to right, as in real convergence work.
+- **Sound.** Synthesised effects for placing, turning and removing strips, a
+  rising chime as each character locks, a fanfare on a win. A Sound button
+  turns them off.
+- **Motion.** Electrons stream along the three active beams. Sparks fly when a
+  character locks and when the level is won; the stars earned are drawn on screen.
+- Enter goes to the next level after a win. The mouse wheel changes the
+  strength of the strip under the cursor.
+- The DOS edition is unchanged by this.
