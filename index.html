@@ -1,281 +1,346 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Charge! Phosphor</title>
+<title>Charge! Convergence</title>
 <style>
-/* Concept: the inside of a CRT. Gun at the left, deflection charges in the vacuum, phosphor at the right wall.
-   Single dark look on purpose: a lit-up tube. */
-:root{--bg:#060908;--panel:#0d1411;--line:#1d2b24;--fg:#d8ebe0;--dim:#84a193;--phos:#6dff9a;--hot:#ff9d5c;--cool:#5cb8ff;--bad:#ff6b5c}
+/* Concept: a 1990s VGA monitor service screen. One dark look on purpose. */
+:root{--bg:#04060b;--panel:#0b1020;--line:#1c2742;--fg:#d6e2ff;--dim:#7f8fb5;--acc:#6dff9a;--warn:#ffd25c}
 *{box-sizing:border-box}
 html,body{background:var(--bg)}
 body{margin:0;color:var(--fg);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-main{max-width:960px;margin:0 auto;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-h1{font-size:24px;margin:0 0 4px;letter-spacing:.02em}
-p{margin:0 0 12px;color:var(--dim)}
-.tube{position:relative;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#000;box-shadow:0 0 40px rgba(109,255,154,.06)}
-canvas{display:block;width:100%;height:auto;aspect-ratio:2/1;cursor:crosshair;touch-action:none}
-.bar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:12px 0}
-.stat{min-width:90px}
-.stat b{display:block;font:600 22px/1.1 ui-monospace,Menlo,Consolas,monospace;color:var(--phos);font-variant-numeric:tabular-nums}
-.stat span{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
-button,select{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 14px;cursor:pointer}
-button:hover{border-color:var(--phos)}button:focus-visible,select:focus-visible,canvas:focus-visible{outline:2px solid var(--phos);outline-offset:2px}
-label{color:var(--dim)}
+main{max-width:1000px;margin:0 auto;padding-block:18px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-size:22px;margin:0 0 4px;letter-spacing:.03em}
+p{margin:0 0 10px;color:var(--dim)}
+a{color:var(--acc)}
+.mon{position:relative;border:10px solid #151a26;border-radius:22px;background:#000;box-shadow:0 0 0 2px #232b3f,0 0 60px rgba(80,140,255,.10) inset;overflow:hidden}
+.mon canvas{display:block;width:100%;height:auto;aspect-ratio:8/5;image-rendering:pixelated;cursor:crosshair;touch-action:none;outline:none}
+.mon.crt::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(to bottom,rgba(0,0,0,.28) 0 1px,rgba(0,0,0,0) 1px 3px),radial-gradient(ellipse at center,rgba(0,0,0,0) 60%,rgba(0,0,0,.45) 100%)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+button{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer}
+button:hover{border-color:var(--acc)}button:focus-visible,canvas:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+button[aria-pressed=true]{background:#14301f;border-color:var(--acc)}
 #msg{min-height:1.5em;color:var(--fg)}
-.note{font-size:13px}
-a{color:var(--phos)}
-.newv{position:fixed;top:max(12px,env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px));z-index:20;display:block;padding:16px 28px;border-radius:14px;background:var(--phos);color:#03150a;font:700 clamp(20px,3.2vw,34px)/1.1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;text-decoration:none;box-shadow:0 0 0 2px rgba(109,255,154,.35),0 0 36px rgba(109,255,154,.45)}
-.newv small{display:block;font:500 clamp(11px,1.4vw,14px)/1.3 system-ui,sans-serif;opacity:.8;margin-top:4px}
-.newv:hover{filter:brightness(1.1)}.newv:focus-visible{outline:3px solid #fff;outline-offset:3px}
-main{padding-top:112px}
+.keys{font-size:13px}
+.links{margin-top:16px;font-size:14px}
 </style></head><body>
-<a class="newv" href="v2/index.html">New Version &rarr;<small>real CRT physics, with lessons</small></a>
 <main>
-<h1>Charge! Phosphor</h1>
-<p>You are inside a cathode ray tube. The gun at the left fires 16 electrons. Charges in the vacuum bend each one (orange + pulls, blue - pushes). Land them <b>evenly</b> across the 16 bands of the phosphor on the right wall: one in every band. Two in a band over-drives it and leaves a burn.</p>
-<div class="tube"><canvas id="c" width="960" height="480" tabindex="0" aria-label="CRT tube cutaway. Click to fire the beam at that point."></canvas></div>
-<div class="bar">
-  <div class="stat"><b id="sShots">16</b><span>shots left</span></div>
-  <div class="stat"><b id="sEven">0%</b><span>evenness</span></div>
-  <div class="stat"><b id="sBands">0/16</b><span>bands lit</span></div>
-  <div class="stat"><b id="sBest">-</b><span>best, this level</span></div>
-  <button id="conv" title="Sweep the aim and fire at the emptiest band (C)">Converge</button>
-  <button id="auto" title="Converge on every remaining shot (A)">Auto-fill</button>
-  <button id="undo" title="Take back the last shot (U)">Undo</button>
-  <button id="retry" title="Same tube, fresh 16 shots (R)">Retry</button>
-  <button id="again" title="New layout (N)">New tube</button>
-  <label>Charges <select id="lvl"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select></label>
+<h1>Charge! Convergence</h1>
+<p>Three electron beams, red, green and blue, leave the gun and have to meet at one point on the screen. Stray charges bend each beam by a different amount. Place magnetic convergence strips until the test dots at the right turn pure white.</p>
+<div class="mon crt" id="mon"><canvas id="c" width="320" height="200" tabindex="0" aria-label="Convergence puzzle, 320 by 200 VGA style display"></canvas></div>
+<div class="bar" role="toolbar" aria-label="Strip tools">
+  <button id="bRot" title="Rotate the strip (R, or right click)">Rotate</button>
+  <button id="bPol" title="Flip polarity (P)">Polarity +</button>
+  <button id="bKind" title="Dipole shifts all three beams, quadrupole pushes outer beams apart or together (T)">Type: dipole</button>
+  <button id="bStr" title="Strength 1 to 3 (1, 2, 3 or S)">Strength 2</button>
+  <button id="bUndo" title="Take back the last strip (U)">Undo</button>
+  <button id="bClear" title="Remove all strips (C)">Clear</button>
+  <button id="bAuto" title="Search for strip placements (A). Costs the stars.">Auto-place</button>
+  <button id="bPrev" title="Previous level">&lt; Level</button>
+  <button id="bNext" title="Next level (N)">Level &gt;</button>
+  <button id="bCrt" aria-pressed="true" title="Scanlines and vignette (F)">CRT filter</button>
 </div>
-<div id="msg" role="status">Click inside the tube to aim and fire.</div>
-<p class="note" id="keys">Keys: arrows move the aim (Shift for bigger steps), Space or Enter fires, C converge, A auto-fill, U undo, R retry, N new tube. Tube <b id="tubeNo"></b> is in the page address, so a link replays the same layout. Click while the beam is flying to skip ahead.</p>
-<p class="note">Physics is the law from C. Anthony Ray's <i>Charge!</i> (BYTE, December 1982, lines 1010 to 1090): the launch vector is scaled to speed 10, and at every step the charges add CG&nbsp;&times;&nbsp;q&nbsp;&times;&nbsp;d&nbsp;/&nbsp;|d|&sup2; (a 1/r pull or push, CG = 25) to it, with the same charge placement as lines 2070 to 2150. This game and its goal are new; his original is unchanged and runs here: <a href="original/index.html">the 1982 Applesoft listing</a>.</p>
+<div id="msg" role="status"></div>
+<p class="keys">Mouse: click inside the tube to place a strip, click a strip to remove it, right click or R to rotate. Keys: arrows move the cursor, Space places, R rotate, P polarity, T dipole or quadrupole, 1 2 3 strength, U undo, C clear, A auto-place, N next level, F filter.</p>
+<p class="keys"><b>Reading the screen.</b> The right column is the test pattern: five dots, one for each place on the screen the beams are aimed at, magnified 3x vertically. A white dot is converged, colour fringes show which beam is off and by how much (red high, blue low). CONV is the spread between the three beams in pixels; it must be 2 or less at every dot. PURITY is how far the three together miss the target, 6 or less. A dipole strip moves the beams together, a quadrupole strip pulls the outer two toward or away from the middle one, which is how convergence magnets work.</p>
+<p class="links">Descended from <i>Charge!</i> by C. Anthony Ray (BYTE, December 1982): the charges and their placement follow his listing. Other versions: <a href="classic/index.html">Charge! Phosphor</a>, <a href="v2/index.html">the physics lab</a>, <a href="original/index.html">the 1982 Applesoft listing</a>.</p>
 </main>
 <script>
 (()=>{
 'use strict';
 const $=id=>document.getElementById(id);
-const cv=$('c'),g=cv.getContext('2d');
-const S=3,FW=280,FH=160,SX=cv.width/S; // canvas is 320x160 logical, field is 280x160, the rest holds the band gauge
-const GUN={x:7,y:80},SPEED=10,CG=25,BANDS=16,SHOTS=16,BH=FH/BANDS;
-let skip=null,autoRun=false,ions,counts,misses,left,anim=null,trails,glow,burn,mouse=null,lvl=3,flash=0;
-let seed=1,rnd=Math.random;
+/* ================= VGA-style display: 320x200, 256 colours, RGB332 palette ================= */
+const W=320,H=200,fb=new Uint8Array(W*H);
+const pal=new Uint32Array(256);
+for(let i=0;i<256;i++){const r=Math.round((i>>5)*255/7),g=Math.round(((i>>2)&7)*255/7),b=Math.round((i&3)*255/3);pal[i]=0xFF000000|(b<<16)|(g<<8)|r}
+const cv=$('c'),g=cv.getContext('2d'),img=g.createImageData(W,H),img32=new Uint32Array(img.data.buffer);
+const rgb=(r,g,b)=>((r>>5)<<5)|((g>>5)<<2)|(b>>6);
+const BAY=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5];
+const px=(x,y,c)=>{if(x>=0&&x<W&&y>=0&&y<H)fb[y*W+x]=c};
+function addLight(x,y,r,gc,b){
+  if(x<0||x>=W||y<0||y>=H)return;
+  const i=y*W+x,c=fb[i],t=(BAY[(y&3)*4+(x&3)]+.5)/16;
+  const R=Math.min(7,Math.floor(Math.min(1,(c>>5)/7+r)*7+t)),G=Math.min(7,Math.floor(Math.min(1,((c>>2)&7)/7+gc)*7+t)),B=Math.min(3,Math.floor(Math.min(1,(c&3)/3+b)*3+t));
+  fb[i]=R<<5|G<<2|B;
+}
+function rect(x,y,w,h,c){for(let j=0;j<h;j++)for(let i=0;i<w;i++)px(x+i,y+j,c)}
+function flip(){for(let i=0;i<W*H;i++)img32[i]=pal[fb[i]];g.putImageData(img,0,0)}
+/* 5x7 bitmap font, drawn at 6x8 cells */
+const F={};
+const FD={A:'0E 11 11 1F 11 11 11',B:'1E 11 11 1E 11 11 1E',C:'0E 11 10 10 10 11 0E',D:'1E 11 11 11 11 11 1E',E:'1F 10 10 1E 10 10 1F',F:'1F 10 10 1E 10 10 10',G:'0E 11 10 17 11 11 0F',H:'11 11 11 1F 11 11 11',I:'0E 04 04 04 04 04 0E',J:'07 02 02 02 02 12 0C',K:'11 12 14 18 14 12 11',L:'10 10 10 10 10 10 1F',M:'11 1B 15 15 11 11 11',N:'11 11 19 15 13 11 11',O:'0E 11 11 11 11 11 0E',P:'1E 11 11 1E 10 10 10',Q:'0E 11 11 11 15 12 0D',R:'1E 11 11 1E 14 12 11',S:'0F 10 10 0E 01 01 1E',T:'1F 04 04 04 04 04 04',U:'11 11 11 11 11 11 0E',V:'11 11 11 11 11 0A 04',W:'11 11 11 15 15 15 0A',X:'11 11 0A 04 0A 11 11',Y:'11 11 0A 04 04 04 04',Z:'1F 01 02 04 08 10 1F',
+'0':'0E 11 13 15 19 11 0E','1':'04 0C 04 04 04 04 0E','2':'0E 11 01 02 04 08 1F','3':'1F 02 04 02 01 11 0E','4':'02 06 0A 12 1F 02 02','5':'1F 10 1E 01 01 11 0E','6':'06 08 10 1E 11 11 0E','7':'1F 01 02 04 08 08 08','8':'0E 11 11 0E 11 11 0E','9':'0E 11 11 0F 01 02 0C',
+'.':'00 00 00 00 00 0C 0C',',':'00 00 00 00 0C 04 08',':':'00 0C 0C 00 0C 0C 00','-':'00 00 00 1F 00 00 00','+':'00 04 04 1F 04 04 00','/':'01 01 02 04 08 10 10','%':'18 19 02 04 08 13 03','(':'02 04 08 08 08 04 02',')':'08 04 02 02 02 04 08','!':'04 04 04 04 04 00 04','?':'0E 11 01 02 04 00 04','>':'08 04 02 01 02 04 08','<':'02 04 08 10 08 04 02','=':'00 00 1F 00 1F 00 00',"'":'04 04 08 00 00 00 00','#':'0A 0A 1F 0A 1F 0A 0A','*':'00 04 15 0E 15 04 00',' ':'00 00 00 00 00 00 00'};
+for(const k in FD)F[k]=FD[k].split(' ').map(h=>parseInt(h,16));
+function text(s,x,y,c,sc=1,shadow=0){
+  s=String(s).toUpperCase();
+  for(const ch of s){
+    const gl=F[ch]||F['?'];
+    for(let r=0;r<7;r++)for(let q=0;q<5;q++)if(gl[r]>>(4-q)&1){
+      if(shadow)rect(x+q*sc+sc,y+r*sc+sc,sc,sc,shadow);
+      rect(x+q*sc,y+r*sc,sc,sc,c);
+    }
+    x+=6*sc;
+  }
+}
+const COL={bg:rgb(6,10,26),grid:rgb(20,30,70),ui:rgb(160,180,255),dim:rgb(90,110,170),white:255,ok:rgb(100,255,140),bad:rgb(255,90,90),warn:rgb(255,210,80),
+  plus:rgb(255,160,64),minus:rgb(64,160,255),metal:rgb(120,130,150),frame:rgb(40,55,110)};
+/* ================= physics (field coordinates: 256 x 160 pixels) ================= */
+const FW=256,FH=160,FX0=4,FY0=20,GUN={x:8,y:80},OFF=[-10,0,10],AIMS=[20,50,80,110,140];
+const SPD=5,CGP=0.5,BETA=0.012,STRIP_L=40,STRIP_T=12,CONV_TOL=2,PUR_TOL=6;
+let ions=[],strips=[],seed=1,level=1,tool={rot:0,pol:1,kind:'D',str:2},cursor=null,passed=false,usedAuto=false,msg='';
 const mulberry=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
-const store={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
-let history=[],aim={x:200,y:80};
-const best=()=>{try{return JSON.parse(localStorage.getItem('crt-best')||'{}')}catch(e){return {}}};
-const saveBest=v=>{try{const b=best();if(!(b[lvl]>=v)){b[lvl]=v;localStorage.setItem('crt-best',JSON.stringify(b))}}catch(e){}};
-
-function newTube(keepSeed){
-  lvl=+$('lvl').value;store.set('crt-lvl',String(lvl));
-  if(keepSeed!==true){seed=1+Math.floor(Math.random()*99999)}
-  rnd=mulberry(seed*7+lvl);history=[];
-  try{history_replace('#tube-'+seed)}catch(e){}
-  $('tubeNo').textContent=seed;
-  ions=[];
-  for(let i=0;i<lvl;i++)ions.push({x:2*Math.floor(rnd()*125)+15,y:2*Math.floor(rnd()*65)+14,q:i%2===0?1:-1}); // lines 2080 to 2110
-  counts=new Array(BANDS).fill(0);misses=0;left=SHOTS;trails=[];
-  glow=new Float32Array(FH);burn=new Float32Array(FH);
-  if(anim){cancelAnimationFrame(anim);anim=null}
-  say('Tube '+seed+'. Click inside the tube to aim and fire.');hud();
+function genLevel(L){
+  const r=mulberry(L*977+13),n=Math.min(7,2+L);ions=[];
+  for(let i=0;i<n;i++)ions.push({x:2*Math.floor(r()*105)+34,y:2*Math.floor(r()*65)+14,q:i%2===0?1:-1}); // placement as lines 2080 to 2110 of the 1982 listing, charges alternate, + first
+  strips=[];usedAuto=false;passed=false;
 }
-const history_replace=h=>{if(location.hash!==h)location.hash=h};
-function say(t){$('msg').textContent=t}
-function evenness(){
-  const dev=counts.reduce((a,c)=>a+Math.abs(c-1),0)+misses;
-  return Math.max(0,100*(1-dev/(2*SHOTS*(1-1/BANDS))));
-}
-function hud(){
-  $('sShots').textContent=left;
-  $('sEven').textContent=Math.round(evenness())+'%';
-  $('sBands').textContent=counts.filter(c=>c>0).length+'/'+BANDS;
-  const b=best()[lvl];$('sBest').textContent=b==null?'-':Math.round(b)+'%';
-}
-// Same step law as lines 1050 to 1090: v = launch vector + sum CG*q*d/|d|^2 (not accumulated).
-function simulate(tx,ty){
-  let hp=Math.hypot(tx,ty);if(hp===0)hp=1;
-  const xo=tx*SPEED/hp,yo=ty*SPEED/hp;
-  let x=GUN.x,y=GUN.y;const pts=[[x,y]];
-  for(let n=0;n<600;n++){
-    let xn=xo,yn=yo;
-    for(const o of ions){const dx=o.x-x,dy=o.y-y,h=Math.max(dx*dx+dy*dy,1);xn+=CG*o.q*dx/h;yn+=CG*o.q*dy/h}
-    const nx=x+xn,ny=y+yn;
-    if(nx<0||nx>FW-1||ny<0||ny>FH-1){
-      let t=1;
-      if(nx<0)t=Math.min(t,(0-x)/(nx-x));
-      if(nx>FW-1)t=Math.min(t,(FW-1-x)/(nx-x));
-      if(ny<0)t=Math.min(t,(0-y)/(ny-y));
-      if(ny>FH-1)t=Math.min(t,(FH-1-y)/(ny-y));
-      const ex=x+(nx-x)*t,ey=y+(ny-y)*t;pts.push([ex,ey]);
-      const onScreen=nx>FW-1&&t===(FW-1-x)/(nx-x)&&ey>=0&&ey<=FH-1;
-      return{pts,hit:onScreen?Math.min(FH-1,Math.max(0,ey)):null};
+const budget=()=>4+Math.floor(level/2);
+function sim(offY,ay,rec){
+  let x=GUN.x,y=GUN.y+offY;
+  const dx=FW-1-x,dy=ay-y,d=Math.hypot(dx,dy);let vx=SPD*dx/d,vy=SPD*dy/d;
+  const pts=rec?[[x,y]]:null;
+  for(let n=0;n<170;n++){
+    let ax=0,ay2=0;
+    for(const o of ions){const ex=o.x-x,ey=o.y-y,h=ex*ex+ey*ey+36;ax+=CGP*o.q*ex/h;ay2+=CGP*o.q*ey/h}
+    vx+=ax;vy+=ay2;
+    for(const s of strips){
+      const c=Math.cos(s.a),sn=Math.sin(s.a),qx=x-s.x,qy=y-s.y,u=qx*c+qy*sn,w=-qx*sn+qy*c;
+      if(Math.abs(u)<=STRIP_L/2&&Math.abs(w)<=STRIP_T/2){
+        const gr=s.kind==='Q'?w/(STRIP_T/2):1,b=s.pol*s.str*BETA*gr,cb=Math.cos(b),sb=Math.sin(b);
+        const nx=vx*cb-vy*sb,ny=vx*sb+vy*cb;vx=nx;vy=ny;
+      }
     }
-    x=nx;y=ny;pts.push([x,y]);
+    const nx=x+vx,ny=y+vy;
+    if(nx>=FW-1){const t=(FW-1-x)/(nx-x),yy=y+(ny-y)*t;if(pts)pts.push([FW-1,yy]);return{y:yy,pts}}
+    if(ny<0||ny>FH-1||nx<0){if(pts)pts.push([nx,ny]);return{y:null,pts}}
+    x=nx;y=ny;if(pts)pts.push([x,y]);
   }
-  return{pts,hit:null};
+  return{y:null,pts};
 }
-function fire(ax,ay){
-  if(anim||left<=0)return;
-  aim={x:ax,y:ay};
-  const r=simulate(ax-GUN.x,ay-GUN.y);
-  let i=0;
-  skip=()=>{i=r.pts.length};
-  const step=()=>{
-    i=Math.min(r.pts.length,i+2);
-    trails.cur={pts:r.pts.slice(0,i)};
-    if(i<r.pts.length){anim=requestAnimationFrame(step);return}
-    anim=null;skip=null;land(r);
-    if(autoRun){if(left>0)setTimeout(converge,180);else autoRun=false}
-  };
-  anim=requestAnimationFrame(step);
-}
-function land(r){
-  left--;history.push({hit:r.hit,pts:r.pts,band:r.hit==null?null:Math.min(BANDS-1,Math.floor(r.hit/BH))});
-  if(trails.cur){trails.push(trails.cur.pts);if(trails.length>4)trails.shift();trails.cur=null}
-  if(r.hit==null){misses++;flash=1;say('The beam struck the glass. No light, and it counts against evenness.')}
-  else{
-    const b=Math.min(BANDS-1,Math.floor(r.hit/BH));
-    counts[b]++;
-    for(let y=0;y<FH;y++){const d=(y-r.hit)/3;glow[y]=Math.min(1.4,glow[y]+Math.exp(-d*d/2))}
-    if(counts[b]>1){for(let y=Math.floor(b*BH);y<(b+1)*BH;y++)burn[y]=Math.min(1,burn[y]+0.45);say('Band '+(b+1)+' is over-driven. That leaves a burn.')}
-    else say('Band '+(b+1)+' lit.');
+function evaluate(rec){
+  const rows=[];let cost=0,wc=0,wp=0;
+  for(const ay of AIMS){
+    const b=OFF.map(o=>sim(o,ay,rec));
+    const ys=b.map(r=>r.y);
+    let conv=40,pur=40;
+    if(ys.every(v=>v!=null)){conv=Math.max(...ys)-Math.min(...ys);pur=Math.abs((ys[0]+ys[1]+ys[2])/3-ay)}
+    rows.push({ay,b,ys,conv,pur});cost+=conv*conv+0.5*pur*pur;wc=Math.max(wc,conv);wp=Math.max(wp,pur);
   }
-  hud();
-  if(left===0){
-    const e=evenness();saveBest(e);hud();
-    say(e>=95?'Even coat: '+Math.round(e)+'%. A flat field.':e>=75?'Evenness '+Math.round(e)+'%. Visible banding.':'Evenness '+Math.round(e)+'%. Patchy phosphor.');
+  return{rows,cost,wc,wp,ok:wc<=CONV_TOL&&wp<=PUR_TOL};
+}
+/* auto-place: simulated annealing, then a hill-climb, over K strips. Runs in slices so the search is visible. */
+let searching=false;
+async function autoPlace(K,live){
+  searching=true;
+  const rnd=Math.random,P=()=>({x:20+rnd()*(FW-40),y:8+rnd()*(FH-16),a:Math.floor(rnd()*4)*Math.PI/4,pol:rnd()<.5?-1:1,kind:rnd()<.5?'D':'Q',str:1+Math.floor(rnd()*3)});
+  let cur=Array.from({length:K},P);strips=cur;let c=evaluate().cost,best=cur.map(s=>({...s})),bc=c;
+  const iters=9000;
+  for(let it=0;it<iters+3000&&bc>0.3;it++){
+    const refine=it>=iters,T=refine?0.01:60*Math.pow(1-it/iters,2)+0.02;
+    const cand=cur.map(s=>({...s})),i=Math.floor(rnd()*K),s=cand[i],m=rnd(),j=refine?4:30;
+    if(m<.6){s.x=Math.max(14,Math.min(FW-14,s.x+(rnd()-.5)*j));s.y=Math.max(8,Math.min(FH-8,s.y+(rnd()-.5)*j))}
+    else if(m<.7&&!refine)s.a=Math.floor(rnd()*4)*Math.PI/4;
+    else if(m<.78&&!refine)s.pol*=-1;
+    else if(m<.86&&!refine)s.kind=s.kind==='D'?'Q':'D';
+    else if(m<.96)s.str=1+Math.floor(rnd()*3);
+    else if(!refine)cand[i]=P();
+    strips=cand;const cc=evaluate().cost;
+    if(cc<c||rnd()<Math.exp((c-cc)/T)){cur=cand;c=cc;if(c<bc){bc=c;best=cand.map(q=>({...q}))}}
+    if(it%300===0){strips=live?cur:best;await new Promise(r=>setTimeout(r,0))}
+  }
+  strips=best.map(q=>({...q,a:q.a}));searching=false;return bc;
+}
+/* ================= drawing ================= */
+function drawBackdrop(){
+  // monitor chassis: dithered dark blue gradient in RGB332
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const t=(BAY[(y&3)*4+(x&3)]+.5)/16,b=Math.min(3,Math.floor(0.25+(y/H)*1.3+t*0.75));
+    fb[y*W+x]=(b>0?1:0)<<5|b;
   }
 }
-function rebuildFromHistory(){
-  counts=new Array(BANDS).fill(0);misses=0;glow=new Float32Array(FH);burn=new Float32Array(FH);trails=[];
-  for(const h of history){
-    if(h.hit==null)misses++;
-    else{counts[h.band]++;for(let y=0;y<FH;y++){const d=(y-h.hit)/3;glow[y]=Math.min(1.4,glow[y]+Math.exp(-d*d/2))}
-      if(counts[h.band]>1)for(let y=Math.floor(h.band*BH);y<(h.band+1)*BH;y++)burn[y]=Math.min(1,burn[y]+0.45)}
-    trails.push(h.pts);if(trails.length>4)trails.shift();
+function drawTubeBg(){
+  // inside of the tube: very dark blue, a vignette, and a fine grid
+  for(let y=0;y<FH;y++)for(let x=0;x<FW;x++){
+    const dx=(x-FW/2)/(FW/2),dy=(y-FH/2)/(FH/2),v=1-0.5*(dx*dx+dy*dy),t=(BAY[(y&3)*4+(x&3)]+.5)/16;
+    const b=Math.min(3,Math.floor(Math.max(0,v)*0.9+t*0.6)),gr=0;
+    let c=(gr<<2)|b;
+    if(x%32===0||y%32===0)c=rgb(18,26,60);
+    px(FX0+x,FY0+y,c);
   }
-  left=SHOTS-history.length;
+  // frame
+  for(let x=-1;x<=FW;x++){px(FX0+x,FY0-1,COL.frame);px(FX0+x,FY0+FH,COL.frame)}
+  for(let y=-1;y<=FH;y++){px(FX0-1,FY0+y,COL.frame);px(FX0+FW,FY0+y,COL.frame)}
 }
-function undo(){
-  if(anim||!history.length)return;
-  history.pop();rebuildFromHistory();hud();say('Last shot taken back.');
+function drawGun(){
+  rect(FX0,FY0+GUN.y-14,7,28,COL.metal);rect(FX0+7,FY0+GUN.y-12,3,24,rgb(80,90,110));
+  for(const o of OFF){rect(FX0+9,FY0+GUN.y+o-1,3,3,rgb(255,200,120));addLight(FX0+12,FY0+GUN.y+o,1,.6,.2)}
 }
-function retry(){ $('lvl').value=lvl;newTube(true) }
-function autoFill(){ if(anim||left<=0)return;autoRun=true;converge() }
-// Converge: sweep launch angles, pick the one landing in the least-lit band (nearest its centre).
-function converge(){
-  if(anim||left<=0)return;
-  let bestScore=-1,bestAim=null;
-  const target=counts.map((c,i)=>c).reduce((m,c,i)=>c<counts[m]?i:m,0);
-  const order=counts.map((c,i)=>i).sort((a,b)=>counts[a]-counts[b]);
-  for(const tb of order){
-    const cy=(tb+.5)*BH;let bd=1e9,ba=null;
-    for(let a=-80;a<=80;a+=0.25){
-      const rad=a*Math.PI/180,r=simulate(Math.cos(rad),Math.sin(rad));
-      if(r.hit!=null&&Math.floor(r.hit/BH)===tb){const d=Math.abs(r.hit-cy);if(d<bd){bd=d;ba=rad}}
+function drawGrille(){
+  // aperture grille wall: R, G, B stripes with a pitch of six pixels
+  const cols=[rgb(110,20,20),rgb(20,110,20),rgb(20,30,140)];
+  for(let y=0;y<FH;y++){const c=cols[Math.floor(y/2)%3];for(let x=FW-4;x<FW;x++)px(FX0+x,FY0+y,x===FW-4?COL.frame:c)}
+}
+function ring(cx,cy,r,c,fill){
+  for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){const d=x*x+y*y;if(d<=r*r&&d>=(r-1.4)*(r-1.4))px(cx+x,cy+y,c);else if(fill!=null&&d<(r-1.4)*(r-1.4))px(cx+x,cy+y,fill)}
+}
+function drawIons(){
+  for(const o of ions){
+    const cx=FX0+Math.round(o.x),cy=FY0+Math.round(o.y),c=o.q>0?COL.plus:COL.minus;
+    ring(cx,cy,6,c,rgb(10,14,30));
+    rect(cx-2,cy,5,1,c);if(o.q>0)rect(cx,cy-2,1,5,c);
+    for(let a=0;a<16;a++){const t=a/16*6.283;px(cx+Math.round(Math.cos(t)*11),cy+Math.round(Math.sin(t)*11),o.q>0?rgb(90,55,20):rgb(20,55,90))}
+  }
+}
+function stripPix(s,alpha){
+  const c=Math.cos(s.a),sn=Math.sin(s.a),R=Math.ceil(Math.hypot(STRIP_L/2,STRIP_T/2))+1;
+  const base=s.pol>0?[255,120,60]:[70,150,255];
+  for(let j=-R;j<=R;j++)for(let i=-R;i<=R;i++){
+    const x=Math.round(s.x)+i,y=Math.round(s.y)+j,qx=x-s.x,qy=y-s.y,u=qx*c+qy*sn,w=-qx*sn+qy*c;
+    if(Math.abs(u)>STRIP_L/2||Math.abs(w)>STRIP_T/2)continue;
+    const edge=Math.abs(u)>STRIP_L/2-1.2||Math.abs(w)>STRIP_T/2-1.2;
+    let k=edge?1:(s.kind==='Q'?0.25+0.6*Math.abs(w)/(STRIP_T/2):0.55);
+    if(s.kind==='Q'&&!edge&&((Math.floor(u/3)+0)&1)===0)k*=0.6;
+    const t=(BAY[(y&3)*4+(x&3)]+.5)/16;
+    if(alpha<1&&t>alpha)continue;
+    px(FX0+x,FY0+y,rgb(base[0]*k,base[1]*k,base[2]*k));
+  }
+  // strength pips
+  for(let n=0;n<s.str;n++)px(FX0+Math.round(s.x)-2+n*2,FY0+Math.round(s.y),COL.white);
+}
+const BEAM=[[1,0,0],[0,1,0],[0,0,1]];
+function drawBeams(ev){
+  for(const row of ev.rows){
+    for(let bi=0;bi<3;bi++){
+      const p=row.b[bi].pts,col=BEAM[bi];
+      for(let i=1;i<p.length;i++){
+        const [x0,y0]=p[i-1],[x1,y1]=p[i],n=Math.max(1,Math.ceil(Math.hypot(x1-x0,y1-y0)));
+        for(let s=0;s<n;s++){
+          const x=x0+(x1-x0)*s/n,y=y0+(y1-y0)*s/n,X=FX0+Math.round(x),Y=FY0+Math.round(y);
+          if(x<0||x>=FW||y<0||y>=FH)continue;
+          addLight(X,Y,col[0]*.55,col[1]*.55,col[2]*.55);
+          if(y-Math.round(y)>0.2)addLight(X,Y+1,col[0]*.12,col[1]*.12,col[2]*.12);else if(y-Math.round(y)<-0.2)addLight(X,Y-1,col[0]*.12,col[1]*.12,col[2]*.12);
+        }
+      }
+      // landing flash on the grille
+      if(row.ys[bi]!=null){const ly=Math.round(row.ys[bi]);for(let k=-1;k<=1;k++)for(let xx=FW-8;xx<FW;xx++)addLight(FX0+xx,FY0+ly+k,col[0]*(k?.35:1),col[1]*(k?.35:1),col[2]*(k?.35:1))}
     }
-    if(ba!=null){bestAim=[GUN.x+Math.cos(ba)*100,GUN.y+Math.sin(ba)*100];break}
   }
-  if(!bestAim){autoRun=false;say('No clear path into the emptiest bands from here. Aim by hand.');return}
-  fire(bestAim[0],bestAim[1]);
 }
-/* ---------- drawing ---------- */
-const X=v=>v*S,Y=v=>v*S;
-function bandY(b){return b*BH}
-function draw(){
-  g.setTransform(1,0,0,1,0,0);g.fillStyle='#000';g.fillRect(0,0,cv.width,cv.height);
-  // vacuum: faint vignette so the glass reads as curved
-  const rg=g.createRadialGradient(X(150),Y(80),X(20),X(150),Y(80),X(190));
-  rg.addColorStop(0,'#08110d');rg.addColorStop(1,'#010302');g.fillStyle=rg;g.fillRect(0,0,X(FW),cv.height);
-  // aquadag wall bands (top and bottom)
-  g.fillStyle='#0a0f0d';g.fillRect(0,0,X(FW),4);g.fillRect(0,cv.height-4,X(FW),4);
-  // faint field lines around charges
-  for(const o of ions){
-    const col=o.q>0?'255,157,92':'92,184,255';
-    for(let r=1;r<=4;r++){g.strokeStyle='rgba('+col+','+(0.16/r)+')';g.lineWidth=1;g.beginPath();g.arc(X(o.x),Y(o.y),X(r*12),0,7);g.stroke()}
-  }
-  // gun assembly
-  g.fillStyle='#1b2420';g.fillRect(0,Y(GUN.y-9),X(11),Y(18));
-  g.fillStyle='#2b3832';g.fillRect(X(11),Y(GUN.y-3),X(4),Y(6));
-  const ga=g.createRadialGradient(X(GUN.x),Y(GUN.y),0,X(GUN.x),Y(GUN.y),X(8));
-  ga.addColorStop(0,'rgba(255,170,90,.9)');ga.addColorStop(1,'rgba(255,170,90,0)');
-  g.fillStyle=ga;g.fillRect(0,Y(GUN.y-9),X(18),Y(18));
-  // aim preview (dashed): the launch direction, before the charges bend it
-  if(mouse&&!anim&&left>0){
-    g.setLineDash([6,8]);g.strokeStyle='rgba(216,235,224,.28)';g.lineWidth=1.5;g.beginPath();
-    g.moveTo(X(GUN.x),Y(GUN.y));g.lineTo(X(mouse.x),Y(mouse.y));g.stroke();g.setLineDash([]);
-    const p=simulate(mouse.x-GUN.x,mouse.y-GUN.y);
-    if(p.hit!=null){const pb=Math.min(BANDS-1,Math.floor(p.hit/BH));g.fillStyle='rgba(109,255,154,.18)';g.fillRect(X(FW-14),Y(pb*BH),X(14),Y(BH));g.fillStyle='#d8ebe0';g.font='13px ui-monospace,Menlo,monospace';g.textAlign='right';g.fillText('band '+(pb+1)+(counts[pb]?' (lit)':''),X(FW-16),Y((pb+.5)*BH))}
-    g.strokeStyle='rgba(109,255,154,.35)';g.lineWidth=1.5;g.beginPath();p.pts.forEach((q,i)=>i?g.lineTo(X(q[0]),Y(q[1])):g.moveTo(X(q[0]),Y(q[1])));g.stroke();
-  }
-  // old trails
-  trails.forEach((t,k)=>{g.strokeStyle='rgba(120,190,255,'+(0.08+0.06*k)+')';g.lineWidth=2;g.beginPath();t.forEach((q,i)=>i?g.lineTo(X(q[0]),Y(q[1])):g.moveTo(X(q[0]),Y(q[1])));g.stroke()});
-  // beam in flight
-  if(trails.cur){
-    const t=trails.cur.pts;
-    g.shadowColor='#9fd8ff';g.shadowBlur=14;g.strokeStyle='#e6f6ff';g.lineWidth=2.5;g.beginPath();
-    t.forEach((q,i)=>i?g.lineTo(X(q[0]),Y(q[1])):g.moveTo(X(q[0]),Y(q[1])));g.stroke();g.shadowBlur=0;
-    const h=t[t.length-1];g.fillStyle='#fff';g.beginPath();g.arc(X(h[0]),Y(h[1]),4,0,7);g.fill();
-  }
-  // charges
-  g.font='bold 22px ui-monospace,Menlo,Consolas,monospace';g.textAlign='center';g.textBaseline='middle';
-  for(const o of ions){
-    const col=o.q>0?'#ff9d5c':'#5cb8ff';
-    g.strokeStyle=col;g.lineWidth=2;g.beginPath();g.arc(X(o.x),Y(o.y),14,0,7);g.stroke();
-    g.fillStyle=col;g.fillText(o.q>0?'+':'−',X(o.x),Y(o.y)+1);
-  }
-  // phosphor screen, right wall, with per-row glow and burn
-  const px=X(FW-6),pw=X(6);
-  for(let y=0;y<FH;y++){
-    const gl=Math.min(1,glow[y]),bu=burn[y];
-    const r=Math.round(10+90*gl+bu*60),gc=Math.round(34+200*gl-bu*30),b=Math.round(18+70*gl);
-    g.fillStyle='rgb('+r+','+gc+','+b+')';g.fillRect(px,Y(y),pw,S+1);
-    if(gl>0.05){g.fillStyle='rgba(109,255,154,'+(gl*0.22)+')';g.fillRect(px-X(10)*gl,Y(y),X(10)*gl,S+1)}
-  }
-  // band ticks and gauge
-  g.strokeStyle='rgba(255,255,255,.18)';g.lineWidth=1;
-  for(let b=0;b<=BANDS;b++){g.beginPath();g.moveTo(px-6,Y(bandY(b)));g.lineTo(px+pw,Y(bandY(b)));g.stroke()}
-  g.font='12px ui-monospace,Menlo,Consolas,monospace';g.textAlign='left';
-  for(let b=0;b<BANDS;b++){
-    const c=counts[b],cy=Y((b+.5)*BH),gx=X(FW)+10;
-    g.fillStyle='rgba(255,255,255,.08)';g.fillRect(gx,cy-6,X(34)-12,12);
-    g.fillStyle=c===0?'#223':c===1?'#6dff9a':'#ff6b5c';
-    g.fillRect(gx,cy-6,Math.min(c,3)*(X(34)-12)/3,12);
-    g.fillStyle='rgba(216,235,224,.45)';g.fillText(String(b+1),gx+2,cy-9<0?cy:cy-9+0.01);
-  }
-  // wall strike flash
-  if(flash>0){g.fillStyle='rgba(255,107,92,'+flash*0.18+')';g.fillRect(0,0,X(FW),cv.height);flash=Math.max(0,flash-0.05)}
-  // decay
-  for(let y=0;y<FH;y++)glow[y]*=0.9985;
-  requestAnimationFrame(draw);
+function drawPanel(ev,tick){
+  text('SCREEN',266,20,COL.ui);text('TEST',266,28,COL.dim);
+  ev.rows.forEach((row,i)=>{
+    const top=38+i*28,cx=300,cy=top+12,ok=row.conv<=CONV_TOL;
+    rect(264,top-1,55,26,rgb(8,12,32));
+    for(let x=264;x<319;x++){px(x,top-1,ok?rgb(40,150,70):COL.frame);px(x,top+25,ok?rgb(40,150,70):COL.frame)}
+    text(row.conv>=40?'MISS':row.conv.toFixed(1),267,top+2,ok?COL.ok:COL.bad);
+    text(row.pur>=40?'':'P'+row.pur.toFixed(0),267,top+13,row.pur<=PUR_TOL?COL.dim:COL.warn);
+    if(row.ys.every(v=>v!=null)){
+      const cen=(row.ys[0]+row.ys[1]+row.ys[2])/3;
+      for(let bi=0;bi<3;bi++){
+        const off=Math.max(-9,Math.min(9,(row.ys[bi]-cen)*3)),col=BEAM[bi];
+        for(let y=-6;y<=6;y++)for(let x=-6;x<=6;x++){
+          const d=Math.sqrt(x*x+y*y);if(d>5.6)continue;
+          const k=d<4?1:0.5,X=cx+x,Y=Math.round(cy+off+y);
+          if(Y<top||Y>top+23)continue;
+          addLight(X,Y,col[0]*k,col[1]*k,col[2]*k);
+        }
+      }
+    }
+  });
 }
-/* ---------- input ---------- */
-function pos(e){
-  const r=cv.getBoundingClientRect(),t=e.touches?e.touches[0]||e.changedTouches[0]:e;
-  return{x:(t.clientX-r.left)/r.width*SX,y:(t.clientY-r.top)/r.height*FH};
+function drawHud(ev){
+  rect(0,0,W,16,rgb(10,16,46));
+  text('CONVERGE',6,4,rgb(255,255,255),1);
+  text('LEVEL '+level,66,4,COL.ui);
+  text('STRIPS '+strips.length+'/'+budget(),120,4,strips.length>=budget()?COL.warn:COL.ui);
+  text('CONV '+(ev.wc>=40?'MISS':ev.wc.toFixed(1)),196,4,ev.wc<=CONV_TOL?COL.ok:COL.bad);
+  text('PUR '+(ev.wp>=40?'MISS':ev.wp.toFixed(1)),262,4,ev.wp<=PUR_TOL?COL.ok:COL.warn);
+  rect(0,182,W,18,rgb(10,16,46));
+  const names=['0','45','90','135'];
+  text('TOOL: '+(tool.kind==='D'?'DIPOLE':'QUAD')+'  '+(tool.pol>0?'+':'-')+'  STR '+tool.str+'  ROT '+names[tool.rot],6,184,COL.ui);
+  const m=passed?'CONVERGED! PRESS N FOR THE NEXT LEVEL':'ALIGN ALL FIVE TEST DOTS TO WHITE';
+  text(m,6,192,passed?COL.ok:COL.dim);
 }
-cv.addEventListener('pointermove',e=>{const p=pos(e);mouse=p.x<=FW-1?p:null});
-cv.addEventListener('pointerleave',()=>{mouse=null});
-cv.addEventListener('pointerdown',e=>{const p=pos(e);mouse=p;if(anim&&skip){skip();return}if(p.x>GUN.x+4&&p.x<FW)fire(p.x,p.y)});
-$('conv').addEventListener('click',converge);
-$('again').addEventListener('click',newTube);
-$('lvl').addEventListener('change',newTube);
+let tick=0;
+function banner(){
+  // palette-cycling style banner: colours rotate each frame
+  const cyc=[rgb(255,60,60),rgb(255,200,60),rgb(80,255,100),rgb(60,200,255),rgb(200,100,255)];
+  const s='CONVERGED',x0=FX0+FW/2-s.length*9+3,y0=FY0+8;
+  for(let i=0;i<s.length;i++)text(s[i],x0+i*12,y0,cyc[(i+Math.floor(tick/4))%5],2,rgb(0,0,0));
+}
+function frame(){
+  tick++;
+  drawBackdrop();drawTubeBg();drawGrille();
+  const ev=evaluate(true);
+  passed=ev.ok&&strips.length>0;
+  for(const s of strips)stripPix(s,1);
+  if(cursor&&strips.length<budget()&&inField(cursor))stripPix({x:cursor.x,y:cursor.y,a:tool.rot*Math.PI/4,pol:tool.pol,kind:tool.kind,str:tool.str},.55);
+  drawIons();drawGun();drawBeams(ev);drawPanel(ev,tick);
+  if(passed)banner();
+  drawHud(ev);
+  flip();
+  if(passed&&!frame.reported){frame.reported=true;const stars=usedAuto?0:strips.length<=Math.ceil(ions.length/2)+1?3:strips.length<=ions.length+1?2:1;saveStars(stars);say('Converged with '+strips.length+' strips. '+(usedAuto?'Auto-placed, no stars.':'Stars: '+'*'.repeat(stars)+' of 3.')+' Press N for the next level.')}
+  if(!passed)frame.reported=false;
+  requestAnimationFrame(frame);
+}
+/* ================= input ================= */
+const inField=p=>p.x>=0&&p.x<FW&&p.y>=0&&p.y<FH;
+function pos(e){const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width*W-FX0,y:(e.clientY-r.top)/r.height*H-FY0}}
+function hit(p){for(let i=strips.length-1;i>=0;i--){const s=strips[i],c=Math.cos(s.a),sn=Math.sin(s.a),qx=p.x-s.x,qy=p.y-s.y,u=qx*c+qy*sn,w=-qx*sn+qy*c;if(Math.abs(u)<=STRIP_L/2&&Math.abs(w)<=STRIP_T/2)return i}return -1}
+function place(p){
+  if(!inField(p))return;
+  const h=hit(p);if(h>=0){strips.splice(h,1);say('Strip removed.');return}
+  if(strips.length>=budget()){say('No strips left. Remove one first (click it) or press U.');return}
+  strips.push({x:Math.round(p.x),y:Math.round(p.y),a:tool.rot*Math.PI/4,rot:tool.rot,pol:tool.pol,kind:tool.kind,str:tool.str});
+  say('Strip placed.');
+}
+cv.addEventListener('pointermove',e=>{cursor=pos(e)});
+cv.addEventListener('pointerleave',()=>{cursor=null});
+cv.addEventListener('pointerdown',e=>{if(e.button===2)return;cursor=pos(e);place(cursor);cv.focus()});
+cv.addEventListener('contextmenu',e=>{e.preventDefault();rotate()});
+const say=t=>{msg=t;$('msg').textContent=t};
+function rotate(){tool.rot=(tool.rot+1)%4;sync()}
+function pol(){tool.pol*=-1;sync()}
+function kind(){tool.kind=tool.kind==='D'?'Q':'D';sync()}
+function str(n){tool.str=n||(tool.str%3)+1;sync()}
+function undo(){strips.pop();say('Last strip removed.')}
+function clear(){strips=[];usedAuto=false;say('All strips removed.')}
+async function auto(){
+  if(searching)return;
+  const K=budget();say('Searching for strip placements...');
+  let ev;for(let a=0;a<3;a++){await autoPlace(K,true);ev=evaluate();if(ev.ok)break;say('Searching for strip placements (try '+(a+2)+')...')}
+  usedAuto=true;ev=evaluate();
+  say(ev.ok?'Auto-place found a solution with '+strips.length+' strips.':'Auto-place got the spread down to '+ev.wc.toFixed(1)+' px. Adjust by hand to finish.');
+}
+function go(L){
+  level=Math.max(1,L);try{location.hash='level-'+level}catch(e){}
+  genLevel(level);frame.reported=false;say('Level '+level+': '+ions.length+' charges, '+budget()+' strips.');
+}
+function saveStars(n){try{const b=JSON.parse(localStorage.getItem('conv-stars')||'{}');if(!(b[level]>=n)){b[level]=n;localStorage.setItem('conv-stars',JSON.stringify(b))}}catch(e){}}
+function sync(){
+  $('bPol').textContent='Polarity '+(tool.pol>0?'+':'-');
+  $('bKind').textContent='Type: '+(tool.kind==='D'?'dipole':'quadrupole');
+  $('bStr').textContent='Strength '+tool.str;
+}
+$('bRot').onclick=rotate;$('bPol').onclick=pol;$('bKind').onclick=kind;$('bStr').onclick=()=>str();
+$('bUndo').onclick=undo;$('bClear').onclick=clear;$('bAuto').onclick=auto;
+$('bNext').onclick=()=>go(level+1);$('bPrev').onclick=()=>go(level-1);
+$('bCrt').onclick=()=>{const m=$('mon');m.classList.toggle('crt');$('bCrt').setAttribute('aria-pressed',m.classList.contains('crt'))};
 document.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>b.blur()));
-$('auto').addEventListener('click',autoFill);
-$('undo').addEventListener('click',undo);
-$('retry').addEventListener('click',retry);
 window.addEventListener('keydown',e=>{
-  if(e.ctrlKey||e.metaKey||e.altKey||document.activeElement.tagName==='SELECT')return;
-  const k=e.key.toLowerCase(),st=e.shiftKey?10:3;
-  if(k==='c')converge();else if(k==='a')autoFill();else if(k==='u')undo();else if(k==='r')retry();else if(k==='n')newTube();
-  else if(k==='arrowup'){aim.y-=st;mouse={...aim}}else if(k==='arrowdown'){aim.y+=st;mouse={...aim}}
-  else if(k==='arrowleft'){aim.x-=st;mouse={...aim}}else if(k==='arrowright'){aim.x+=st;mouse={...aim}}
-  else if(k===' '||k==='enter'){if(document.activeElement.tagName==='BUTTON')return;if(anim&&skip)skip();else fire(aim.x,aim.y)}
-  else return;
-  aim.x=Math.max(GUN.x+5,Math.min(FW-2,aim.x));aim.y=Math.max(0,Math.min(FH-1,aim.y));
-  if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();
+  if(e.ctrlKey||e.metaKey||e.altKey)return;
+  const k=e.key.toLowerCase();
+  if(k==='r')rotate();else if(k==='p')pol();else if(k==='t')kind();else if(k==='s')str();
+  else if(k==='1'||k==='2'||k==='3')str(+k);
+  else if(k==='u')undo();else if(k==='c')clear();else if(k==='a')auto();else if(k==='n')go(level+1);
+  else if(k==='f')$('bCrt').click();
+  else if(k.startsWith('arrow')){const st=e.shiftKey?8:2;cursor=cursor||{x:FW/2,y:FH/2};
+    if(k==='arrowleft')cursor.x-=st;if(k==='arrowright')cursor.x+=st;if(k==='arrowup')cursor.y-=st;if(k==='arrowdown')cursor.y+=st;
+    cursor.x=Math.max(0,Math.min(FW-1,cursor.x));cursor.y=Math.max(0,Math.min(FH-1,cursor.y));e.preventDefault()}
+  else if(k===' '){if(document.activeElement.tagName==='BUTTON')return;if(cursor)place(cursor);e.preventDefault()}
 });
-window.addEventListener('hashchange',()=>{const m=/^#tube-(\d+)$/.exec(location.hash);if(m&&+m[1]!==seed){seed=+m[1];newTube(true)}});
-window.__crt={get s(){return{ions,counts,misses,left}},fire,simulate,converge,evenness};
-{const m=/^#tube-(\d+)$/.exec(location.hash);if(m)seed=+m[1];const l=store.get('crt-lvl');if(l&&+l>=1&&+l<=5)$('lvl').value=l;newTube(!!m)}draw();
+window.addEventListener('hashchange',()=>{const m=/^#level-(\d+)$/.exec(location.hash);if(m&&+m[1]!==level)go(+m[1])});
+{const m=/^#level-(\d+)$/.exec(location.hash);level=m?Math.max(1,+m[1]):1;genLevel(level);say('Level '+level+': '+ions.length+' charges, '+budget()+' strips. Click inside the tube to place a strip.')}
+sync();requestAnimationFrame(frame);
+window.__cv={get ions(){return ions},get strips(){return strips},evaluate,autoPlace,genLevel,go,budget,set strips(v){strips=v},get level(){return level},get passed(){return passed}};
 })();
 </script>
 </body></html>
