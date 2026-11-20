@@ -8,6 +8,7 @@ rights notice, which apply to that folder.
 | Path | What it is |
 |---|---|
 | `index.html` | **Charge! Convergence**, the main game of this fork (below) |
+| `dos/` | **The DOS edition**: `CONVERGE.EXE` for a 486 with SVGA, AdLib and Sound Blaster. A CRT service-bench game and a test-pattern generator. See `dos/README.md` |
 | `classic/index.html` | Charge! Phosphor: land 16 shots evenly on a phosphor wall |
 | `v2/index.html` | The physics lab: relativistic beam, plates and coils, lessons |
 | `original/` | The 1982 Applesoft listing running in an emulator |
