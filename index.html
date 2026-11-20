@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Charge! Phosphor</title>
+<style>
+/* Concept: the inside of a CRT. Gun at the left, deflection charges in the vacuum, phosphor at the right wall.
+   Single dark look on purpose: a lit-up tube. */
+:root{--bg:#060908;--panel:#0d1411;--line:#1d2b24;--fg:#d8ebe0;--dim:#84a193;--phos:#6dff9a;--hot:#ff9d5c;--cool:#5cb8ff;--bad:#ff6b5c}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{margin:0;color:var(--fg);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:960px;margin:0 auto;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-size:24px;margin:0 0 4px;letter-spacing:.02em}
+p{margin:0 0 12px;color:var(--dim)}
+.tube{position:relative;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#000;box-shadow:0 0 40px rgba(109,255,154,.06)}
+canvas{display:block;width:100%;height:auto;aspect-ratio:2/1;cursor:crosshair;touch-action:none}
+.bar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:12px 0}
+.stat{min-width:90px}
+.stat b{display:block;font:600 22px/1.1 ui-monospace,Menlo,Consolas,monospace;color:var(--phos);font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+button,select{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 14px;cursor:pointer}
+button:hover{border-color:var(--phos)}button:focus-visible,select:focus-visible,canvas:focus-visible{outline:2px solid var(--phos);outline-offset:2px}
+label{color:var(--dim)}
+#msg{min-height:1.5em;color:var(--fg)}
+.note{font-size:13px}
+a{color:var(--phos)}
+</style></head><body>
+<main>
+<h1>Charge! Phosphor</h1>
+<p>You are inside a cathode ray tube. The gun at the left fires 16 electrons. Charges in the vacuum bend each one (orange + pulls, blue - pushes). Land them <b>evenly</b> across the 16 bands of the phosphor on the right wall: one in every band. Two in a band over-drives it and leaves a burn.</p>
+<div class="tube"><canvas id="c" width="960" height="480" tabindex="0" aria-label="CRT tube cutaway. Click to fire the beam at that point."></canvas></div>
+<div class="bar">
+  <div class="stat"><b id="sShots">16</b><span>shots left</span></div>
+  <div class="stat"><b id="sEven">0%</b><span>evenness</span></div>
+  <div class="stat"><b id="sBands">0/16</b><span>bands lit</span></div>
+  <div class="stat"><b id="sBest">-</b><span>best, this level</span></div>
+  <button id="conv" title="Sweep the aim and fire at the emptiest band (C)">Converge</button>
+  <button id="auto" title="Converge on every remaining shot (A)">Auto-fill</button>
+  <button id="undo" title="Take back the last shot (U)">Undo</button>
+  <button id="retry" title="Same tube, fresh 16 shots (R)">Retry</button>
+  <button id="again" title="New layout (N)">New tube</button>
+  <label>Charges <select id="lvl"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select></label>
+</div>
+<div id="msg" role="status">Click inside the tube to aim and fire.</div>
+<p class="note" id="keys">Keys: arrows move the aim (Shift for bigger steps), Space or Enter fires, C converge, A auto-fill, U undo, R retry, N new tube. Tube <b id="tubeNo"></b> is in the page address, so a link replays the same layout. Click while the beam is flying to skip ahead.</p>
+<p class="note">Physics is the law from C. Anthony Ray's <i>Charge!</i> (BYTE, December 1982, lines 1010 to 1090): the launch vector is scaled to speed 10, and at every step the charges add CG&nbsp;&times;&nbsp;q&nbsp;&times;&nbsp;d&nbsp;/&nbsp;|d|&sup2; (a 1/r pull or push, CG = 25) to it, with the same charge placement as lines 2070 to 2150. This game and its goal are new; his original is unchanged and runs here: <a href="original/index.html">the 1982 Applesoft listing</a>.</p>
+</main>
+<script>
+(()=>{
+'use strict';
+const $=id=>document.getElementById(id);
+const cv=$('c'),g=cv.getContext('2d');
+const S=3,FW=280,FH=160,SX=cv.width/S; // canvas is 320x160 logical, field is 280x160, the rest holds the band gauge
+const GUN={x:7,y:80},SPEED=10,CG=25,BANDS=16,SHOTS=16,BH=FH/BANDS;
+let skip=null,autoRun=false,ions,counts,misses,left,anim=null,trails,glow,burn,mouse=null,lvl=3,flash=0;
+let seed=1,rnd=Math.random;
+const mulberry=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+const store={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
+let history=[],aim={x:200,y:80};
+const best=()=>{try{return JSON.parse(localStorage.getItem('crt-best')||'{}')}catch(e){return {}}};
+const saveBest=v=>{try{const b=best();if(!(b[lvl]>=v)){b[lvl]=v;localStorage.setItem('crt-best',JSON.stringify(b))}}catch(e){}};
+
+function newTube(keepSeed){
+  lvl=+$('lvl').value;store.set('crt-lvl',String(lvl));
+  if(keepSeed!==true){seed=1+Math.floor(Math.random()*99999)}
+  rnd=mulberry(seed*7+lvl);history=[];
+  try{history_replace('#tube-'+seed)}catch(e){}
+  $('tubeNo').textContent=seed;
+  ions=[];
+  for(let i=0;i<lvl;i++)ions.push({x:2*Math.floor(rnd()*125)+15,y:2*Math.floor(rnd()*65)+14,q:i%2===0?1:-1}); // lines 2080 to 2110
+  counts=new Array(BANDS).fill(0);misses=0;left=SHOTS;trails=[];
+  glow=new Float32Array(FH);burn=new Float32Array(FH);
+  if(anim){cancelAnimationFrame(anim);anim=null}
+  say('Tube '+seed+'. Click inside the tube to aim and fire.');hud();
+}
+const history_replace=h=>{if(location.hash!==h)location.hash=h};
+function say(t){$('msg').textContent=t}
+function evenness(){
+  const dev=counts.reduce((a,c)=>a+Math.abs(c-1),0)+misses;
+  return Math.max(0,100*(1-dev/(2*SHOTS*(1-1/BANDS))));
+}
+function hud(){
+  $('sShots').textContent=left;
+  $('sEven').textContent=Math.round(evenness())+'%';
+  $('sBands').textContent=counts.filter(c=>c>0).length+'/'+BANDS;
+  const b=best()[lvl];$('sBest').textContent=b==null?'-':Math.round(b)+'%';
+}
+// Same step law as lines 1050 to 1090: v = launch vector + sum CG*q*d/|d|^2 (not accumulated).
+function simulate(tx,ty){
+  let hp=Math.hypot(tx,ty);if(hp===0)hp=1;
+  const xo=tx*SPEED/hp,yo=ty*SPEED/hp;
+  let x=GUN.x,y=GUN.y;const pts=[[x,y]];
+  for(let n=0;n<600;n++){
+    let xn=xo,yn=yo;
+    for(const o of ions){const dx=o.x-x,dy=o.y-y,h=Math.max(dx*dx+dy*dy,1);xn+=CG*o.q*dx/h;yn+=CG*o.q*dy/h}
+    const nx=x+xn,ny=y+yn;
+    if(nx<0||nx>FW-1||ny<0||ny>FH-1){
+      let t=1;
+      if(nx<0)t=Math.min(t,(0-x)/(nx-x));
+      if(nx>FW-1)t=Math.min(t,(FW-1-x)/(nx-x));
+      if(ny<0)t=Math.min(t,(0-y)/(ny-y));
+      if(ny>FH-1)t=Math.min(t,(FH-1-y)/(ny-y));
+      const ex=x+(nx-x)*t,ey=y+(ny-y)*t;pts.push([ex,ey]);
+      const onScreen=nx>FW-1&&t===(FW-1-x)/(nx-x)&&ey>=0&&ey<=FH-1;
+      return{pts,hit:onScreen?Math.min(FH-1,Math.max(0,ey)):null};
+    }
+    x=nx;y=ny;pts.push([x,y]);
+  }
+  return{pts,hit:null};
+}
+function fire(ax,ay){
+  if(anim||left<=0)return;
+  aim={x:ax,y:ay};
+  const r=simulate(ax-GUN.x,ay-GUN.y);
+  let i=0;
+  skip=()=>{i=r.pts.length};
+  const step=()=>{
+    i=Math.min(r.pts.length,i+2);
+    trails.cur={pts:r.pts.slice(0,i)};
+    if(i<r.pts.length){anim=requestAnimationFrame(step);return}
+    anim=null;skip=null;land(r);
+    if(autoRun){if(left>0)setTimeout(converge,180);else autoRun=false}
+  };
+  anim=requestAnimationFrame(step);
+}
+function land(r){
+  left--;history.push({hit:r.hit,pts:r.pts,band:r.hit==null?null:Math.min(BANDS-1,Math.floor(r.hit/BH))});
+  if(trails.cur){trails.push(trails.cur.pts);if(trails.length>4)trails.shift();trails.cur=null}
+  if(r.hit==null){misses++;flash=1;say('The beam struck the glass. No light, and it counts against evenness.')}
+  else{
+    const b=Math.min(BANDS-1,Math.floor(r.hit/BH));
+    counts[b]++;
+    for(let y=0;y<FH;y++){const d=(y-r.hit)/3;glow[y]=Math.min(1.4,glow[y]+Math.exp(-d*d/2))}
+    if(counts[b]>1){for(let y=Math.floor(b*BH);y<(b+1)*BH;y++)burn[y]=Math.min(1,burn[y]+0.45);say('Band '+(b+1)+' is over-driven. That leaves a burn.')}
+    else say('Band '+(b+1)+' lit.');
+  }
+  hud();
+  if(left===0){
+    const e=evenness();saveBest(e);hud();
+    say(e>=95?'Even coat: '+Math.round(e)+'%. A flat field.':e>=75?'Evenness '+Math.round(e)+'%. Visible banding.':'Evenness '+Math.round(e)+'%. Patchy phosphor.');
+  }
+}
+function rebuildFromHistory(){
+  counts=new Array(BANDS).fill(0);misses=0;glow=new Float32Array(FH);burn=new Float32Array(FH);trails=[];
+  for(const h of history){
+    if(h.hit==null)misses++;
+    else{counts[h.band]++;for(let y=0;y<FH;y++){const d=(y-h.hit)/3;glow[y]=Math.min(1.4,glow[y]+Math.exp(-d*d/2))}
+      if(counts[h.band]>1)for(let y=Math.floor(h.band*BH);y<(h.band+1)*BH;y++)burn[y]=Math.min(1,burn[y]+0.45)}
+    trails.push(h.pts);if(trails.length>4)trails.shift();
+  }
+  left=SHOTS-history.length;
+}
+function undo(){
+  if(anim||!history.length)return;
+  history.pop();rebuildFromHistory();hud();say('Last shot taken back.');
+}
+function retry(){ $('lvl').value=lvl;newTube(true) }
+function autoFill(){ if(anim||left<=0)return;autoRun=true;converge() }
+// Converge: sweep launch angles, pick the one landing in the least-lit band (nearest its centre).
+function converge(){
+  if(anim||left<=0)return;
+  let bestScore=-1,bestAim=null;
+  const target=counts.map((c,i)=>c).reduce((m,c,i)=>c<counts[m]?i:m,0);
+  const order=counts.map((c,i)=>i).sort((a,b)=>counts[a]-counts[b]);
+  for(const tb of order){
+    const cy=(tb+.5)*BH;let bd=1e9,ba=null;
+    for(let a=-80;a<=80;a+=0.25){
+      const rad=a*Math.PI/180,r=simulate(Math.cos(rad),Math.sin(rad));
+      if(r.hit!=null&&Math.floor(r.hit/BH)===tb){const d=Math.abs(r.hit-cy);if(d<bd){bd=d;ba=rad}}
+    }
+    if(ba!=null){bestAim=[GUN.x+Math.cos(ba)*100,GUN.y+Math.sin(ba)*100];break}
+  }
+  if(!bestAim){autoRun=false;say('No clear path into the emptiest bands from here. Aim by hand.');return}
+  fire(bestAim[0],bestAim[1]);
+}
+/* ---------- drawing ---------- */
+const X=v=>v*S,Y=v=>v*S;
+function bandY(b){return b*BH}
+function draw(){
+  g.setTransform(1,0,0,1,0,0);g.fillStyle='#000';g.fillRect(0,0,cv.width,cv.height);
+  // vacuum: faint vignette so the glass reads as curved
+  const rg=g.createRadialGradient(X(150),Y(80),X(20),X(150),Y(80),X(190));
+  rg.addColorStop(0,'#08110d');rg.addColorStop(1,'#010302');g.fillStyle=rg;g.fillRect(0,0,X(FW),cv.height);
+  // aquadag wall bands (top and bottom)
+  g.fillStyle='#0a0f0d';g.fillRect(0,0,X(FW),4);g.fillRect(0,cv.height-4,X(FW),4);
+  // faint field lines around charges
+  for(const o of ions){
+    const col=o.q>0?'255,157,92':'92,184,255';
+    for(let r=1;r<=4;r++){g.strokeStyle='rgba('+col+','+(0.16/r)+')';g.lineWidth=1;g.beginPath();g.arc(X(o.x),Y(o.y),X(r*12),0,7);g.stroke()}
+  }
+  // gun assembly
+  g.fillStyle='#1b2420';g.fillRect(0,Y(GUN.y-9),X(11),Y(18));
+  g.fillStyle='#2b3832';g.fillRect(X(11),Y(GUN.y-3),X(4),Y(6));
+  const ga=g.createRadialGradient(X(GUN.x),Y(GUN.y),0,X(GUN.x),Y(GUN.y),X(8));
+  ga.addColorStop(0,'rgba(255,170,90,.9)');ga.addColorStop(1,'rgba(255,170,90,0)');
+  g.fillStyle=ga;g.fillRect(0,Y(GUN.y-9),X(18),Y(18));
+  // aim preview (dashed): the launch direction, before the charges bend it
+  if(mouse&&!anim&&left>0){
+    g.setLineDash([6,8]);g.strokeStyle='rgba(216,235,224,.28)';g.lineWidth=1.5;g.beginPath();
+    g.moveTo(X(GUN.x),Y(GUN.y));g.lineTo(X(mouse.x),Y(mouse.y));g.stroke();g.setLineDash([]);
+    const p=simulate(mouse.x-GUN.x,mouse.y-GUN.y);
+    if(p.hit!=null){const pb=Math.min(BANDS-1,Math.floor(p.hit/BH));g.fillStyle='rgba(109,255,154,.18)';g.fillRect(X(FW-14),Y(pb*BH),X(14),Y(BH));g.fillStyle='#d8ebe0';g.font='13px ui-monospace,Menlo,monospace';g.textAlign='right';g.fillText('band '+(pb+1)+(counts[pb]?' (lit)':''),X(FW-16),Y((pb+.5)*BH))}
+    g.strokeStyle='rgba(109,255,154,.35)';g.lineWidth=1.5;g.beginPath();p.pts.forEach((q,i)=>i?g.lineTo(X(q[0]),Y(q[1])):g.moveTo(X(q[0]),Y(q[1])));g.stroke();
+  }
+  // old trails
+  trails.forEach((t,k)=>{g.strokeStyle='rgba(120,190,255,'+(0.08+0.06*k)+')';g.lineWidth=2;g.beginPath();t.forEach((q,i)=>i?g.lineTo(X(q[0]),Y(q[1])):g.moveTo(X(q[0]),Y(q[1])));g.stroke()});
+  // beam in flight
+  if(trails.cur){
+    const t=trails.cur.pts;
+    g.shadowColor='#9fd8ff';g.shadowBlur=14;g.strokeStyle='#e6f6ff';g.lineWidth=2.5;g.beginPath();
+    t.forEach((q,i)=>i?g.lineTo(X(q[0]),Y(q[1])):g.moveTo(X(q[0]),Y(q[1])));g.stroke();g.shadowBlur=0;
+    const h=t[t.length-1];g.fillStyle='#fff';g.beginPath();g.arc(X(h[0]),Y(h[1]),4,0,7);g.fill();
+  }
+  // charges
+  g.font='bold 22px ui-monospace,Menlo,Consolas,monospace';g.textAlign='center';g.textBaseline='middle';
+  for(const o of ions){
+    const col=o.q>0?'#ff9d5c':'#5cb8ff';
+    g.strokeStyle=col;g.lineWidth=2;g.beginPath();g.arc(X(o.x),Y(o.y),14,0,7);g.stroke();
+    g.fillStyle=col;g.fillText(o.q>0?'+':'−',X(o.x),Y(o.y)+1);
+  }
+  // phosphor screen, right wall, with per-row glow and burn
+  const px=X(FW-6),pw=X(6);
+  for(let y=0;y<FH;y++){
+    const gl=Math.min(1,glow[y]),bu=burn[y];
+    const r=Math.round(10+90*gl+bu*60),gc=Math.round(34+200*gl-bu*30),b=Math.round(18+70*gl);
+    g.fillStyle='rgb('+r+','+gc+','+b+')';g.fillRect(px,Y(y),pw,S+1);
+    if(gl>0.05){g.fillStyle='rgba(109,255,154,'+(gl*0.22)+')';g.fillRect(px-X(10)*gl,Y(y),X(10)*gl,S+1)}
+  }
+  // band ticks and gauge
+  g.strokeStyle='rgba(255,255,255,.18)';g.lineWidth=1;
+  for(let b=0;b<=BANDS;b++){g.beginPath();g.moveTo(px-6,Y(bandY(b)));g.lineTo(px+pw,Y(bandY(b)));g.stroke()}
+  g.font='12px ui-monospace,Menlo,Consolas,monospace';g.textAlign='left';
+  for(let b=0;b<BANDS;b++){
+    const c=counts[b],cy=Y((b+.5)*BH),gx=X(FW)+10;
+    g.fillStyle='rgba(255,255,255,.08)';g.fillRect(gx,cy-6,X(34)-12,12);
+    g.fillStyle=c===0?'#223':c===1?'#6dff9a':'#ff6b5c';
+    g.fillRect(gx,cy-6,Math.min(c,3)*(X(34)-12)/3,12);
+    g.fillStyle='rgba(216,235,224,.45)';g.fillText(String(b+1),gx+2,cy-9<0?cy:cy-9+0.01);
+  }
+  // wall strike flash
+  if(flash>0){g.fillStyle='rgba(255,107,92,'+flash*0.18+')';g.fillRect(0,0,X(FW),cv.height);flash=Math.max(0,flash-0.05)}
+  // decay
+  for(let y=0;y<FH;y++)glow[y]*=0.9985;
+  requestAnimationFrame(draw);
+}
+/* ---------- input ---------- */
+function pos(e){
+  const r=cv.getBoundingClientRect(),t=e.touches?e.touches[0]||e.changedTouches[0]:e;
+  return{x:(t.clientX-r.left)/r.width*SX,y:(t.clientY-r.top)/r.height*FH};
+}
+cv.addEventListener('pointermove',e=>{const p=pos(e);mouse=p.x<=FW-1?p:null});
+cv.addEventListener('pointerleave',()=>{mouse=null});
+cv.addEventListener('pointerdown',e=>{const p=pos(e);mouse=p;if(anim&&skip){skip();return}if(p.x>GUN.x+4&&p.x<FW)fire(p.x,p.y)});
+$('conv').addEventListener('click',converge);
+$('again').addEventListener('click',newTube);
+$('lvl').addEventListener('change',newTube);
+document.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>b.blur()));
+$('auto').addEventListener('click',autoFill);
+$('undo').addEventListener('click',undo);
+$('retry').addEventListener('click',retry);
+window.addEventListener('keydown',e=>{
+  if(e.ctrlKey||e.metaKey||e.altKey||document.activeElement.tagName==='SELECT')return;
+  const k=e.key.toLowerCase(),st=e.shiftKey?10:3;
+  if(k==='c')converge();else if(k==='a')autoFill();else if(k==='u')undo();else if(k==='r')retry();else if(k==='n')newTube();
+  else if(k==='arrowup'){aim.y-=st;mouse={...aim}}else if(k==='arrowdown'){aim.y+=st;mouse={...aim}}
+  else if(k==='arrowleft'){aim.x-=st;mouse={...aim}}else if(k==='arrowright'){aim.x+=st;mouse={...aim}}
+  else if(k===' '||k==='enter'){if(document.activeElement.tagName==='BUTTON')return;if(anim&&skip)skip();else fire(aim.x,aim.y)}
+  else return;
+  aim.x=Math.max(GUN.x+5,Math.min(FW-2,aim.x));aim.y=Math.max(0,Math.min(FH-1,aim.y));
+  if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();
+});
+window.addEventListener('hashchange',()=>{const m=/^#tube-(\d+)$/.exec(location.hash);if(m&&+m[1]!==seed){seed=+m[1];newTube(true)}});
+window.__crt={get s(){return{ions,counts,misses,left}},fire,simulate,converge,evenness};
+{const m=/^#tube-(\d+)$/.exec(location.hash);if(m)seed=+m[1];const l=store.get('crt-lvl');if(l&&+l>=1&&+l<=5)$('lvl').value=l;newTube(!!m)}draw();
+})();
+</script>
+</body></html>

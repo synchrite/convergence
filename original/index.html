@@ -1,0 +1,773 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Charge Apple II</title>
+<style>
+:root{--bg:#f3f3f0;--fg:#1b1b1b;--dim:#59595a;--line:#c8c8c2;--btn:#e4e4de;--acc:#0b5fd1}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#101010;--fg:#e9e9e9;--dim:#a0a0a0;--line:#353535;--btn:#1f1f1f;--acc:#7db2ff}}
+:root[data-theme="dark"]{--bg:#101010;--fg:#e9e9e9;--dim:#a0a0a0;--line:#353535;--btn:#1f1f1f;--acc:#7db2ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:860px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:22px;margin:0 0 4px}
+p{margin:0 0 12px;color:var(--dim)}
+.screen{position:relative;width:100%;aspect-ratio:560/384;background:#000;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+canvas{display:block;width:100%;height:100%;image-rendering:pixelated;outline:none}
+#start{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.72)}
+#start button{font-size:18px;padding:12px 24px}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:12px 0}
+button,select{font:inherit;color:var(--fg);background:var(--btn);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer}
+label{color:var(--dim)}
+details{margin-top:14px;border:1px solid var(--line);border-radius:6px;padding:8px 12px}
+summary{cursor:pointer}
+pre{margin:10px 0 0;max-height:420px;overflow:auto;font:12px/1.35 ui-monospace,Menlo,Consolas,monospace;color:var(--fg)}
+.note{font-size:13px}
+#kb{position:fixed;left:-100px;top:0;width:1px;height:1px;opacity:0}
+</style></head><body>
+<main>
+<h1>Charge!</h1>
+<p><strong>Charge!</strong> was written by C. Anthony Ray of Urbana, Illinois in 1982 and published in BYTE magazine, December 1982, pages 112 to 120, as the second-place winner of the BYTE Game Contest. The program below is his original Applesoft BASIC listing, copyright 1982 C. Anthony Ray. It runs unchanged on an emulated Apple II (Applesoft interpreter, hi-res screen, speaker, and his own 6502 fanfare routine).</p>
+<div class="screen">
+  <canvas id="scr" width="560" height="384" tabindex="0"></canvas>
+  <div id="start"><button id="go">Start</button></div>
+</div>
+<div class="bar">
+  <button id="restart">Restart</button>
+  <label>Speed <select id="speed"><option value="1">1x (Apple II)</option><option value="2">2x</option><option value="4">4x</option><option value="8">8x</option></select></label>
+  <label><input type="checkbox" id="snd" checked> Sound</label>
+  <span id="status" class="note"></span>
+</div>
+<p class="note">Type on the keyboard. Prompts follow the original: skill level (1 to 5 ions), number of players (1 to 4), names, then each turn enter the point you want to hit as x,y (for example 200,120). The lower right corner is 279,159.</p>
+<p class="note">Original code and game design: C. Anthony Ray, 1982. Source: BYTE, December 1982, &copy; BYTE Publications Inc. This page is only an emulator and a transcription of the printed listing, made for preservation. It is not affiliated with the author or with BYTE.</p>
+<details><summary>Program listing (CHARGE.BAS, as typed from the magazine)</summary><pre id="list"></pre></details>
+<input id="kb" autocapitalize="characters" autocomplete="off" aria-hidden="true" tabindex="-1">
+</main>
+<script id="prog" type="text/plain">
+10 REM  ***************************
+20 REM  *                         *
+30 REM  *         CHARGE!         *
+40 REM  *                         *
+50 REM  * COPYRIGHT (C) 1982 *
+60 REM  * BY C. ANTHONY RAY  *
+70 REM  *                         *
+80 REM  ***************************
+90 REM
+100 GOSUB 6010: DIM SG(5,2): GOTO 7010
+1000 REM  * CHARGE MOVE ROUTINE *
+1010 HP = SQR (XO * XO + YO * YO): IF HP = 0 THEN HP = 1
+1020 XO = XO * S0 / HP:YO = YO * S0 / HP
+1030 FOR I = OE TO FV: IM = PEEK (SS):IM = PEEK (SS):NEXT
+1040 DRAW TR AT XP,YP
+1050 XN = XO:YN = YO
+1060 FOR I = ZE TO SL:X = SG(I,ZE) - XP:Y = SG(I,OE) - YP:HP = X * X + Y * Y:XN = XN - CG * SG(I,TW) * X / HP:YN = YN - CG * SG(I,TW) * Y / HP: NEXT
+1070 XDRAW TR AT XP,YP:XP = XP + XN:YP = YP + YN
+1080 IF XP < ZE OR XP > TN OR YP < ZE OR YP > O9 THEN GOTO 3010
+1090 XDRAW TR AT XP,YP: GOTO 1060
+2000 REM  * DRAWS IONS *
+2010 HGR : SCALE= OE: ROT= ZE
+2020 HPLOT ZE,ZE TO 279,ZE TO 279,159 TO ZE,159 TO ZE,ZE
+2030 FOR I = OE TO 13: HPLOT 20 * I,157 TO 20 * I,159: NEXT
+2040 FOR I = OE TO 7: HPLOT 277,20 * I TO 279,20 * I: NEXT
+2050 HC = FV:SP = TW
+2060 PO =  - OE:PI = OE
+2070 FOR I = OE TO SL
+2080 SG(I,ZE) = 2 * INT (125 * RND (1)) + 15
+2090 SG(I,OE) = 2 * INT (65 * RND (1)) + 14
+2100 SG(I,TW) =  - PI
+2110 PI = PI * PO
+2120 HC = HC - PI:SP = SP + PI
+2130 HCOLOR= HC
+2140 DRAW SP AT SG(I,ZE),SG(I,OE)
+2150 NEXT
+2160 HCOLOR= 7
+2170 RETURN
+3000 REM  * IMPACT SEQUENCE *
+3010 IF XP > 279 THEN XP = 279: ROT= 48
+3020 IF YP > 159 THEN YP = 159: ROT= 0
+3030 IF XP < 0 THEN XP = 0: ROT= 16
+3040 IF YP < 0 THEN YP = 0: ROT= 32
+3050 DRAW FR AT XP,YP: FOR I = OE TO 50: IM = PEEK (SS) - PEEK (SS): NEXT
+4000 REM  * SCOREKEEPING & WHOSE TURN *
+4010 FOR I = OE TO HM
+4020 IF I = MC THEN S(I) = S(I) + INT (XP * YP)
+4030 NEXT
+4040 IF INT (XP * YP) = 0 THEN PRINT : GOTO 4070
+4050 GOSUB 8010
+4060 HOME
+4070 C = C + 1
+4080 IF C = FV * HM GOTO 5010
+4090 IF M = HM THEN IF H = HM THEN H = OE: M = OE: MC = OE: GOSUB 2010: GOTO 7150
+4100 IF H = HM THEN M = M + OE: MC = M: H = OE: GOSUB 2010: GOTO 7150
+4110 MC = MC + 1
+4120 H = H + 1
+4130 IF MC > HM THEN MC = 1
+4140 GOTO 7150
+5000 REM  * ENDING SEQUENCE *
+5010 POKE 34,0
+5020 HTAB 1: VTAB 24: GOSUB 9060: PRINT "ANOTHER GAME? (Y/N)";
+5030 GET Y$: IF Y$ <  > "Y" THEN GOTO 5150
+5040 H = 1:M = 1:MC = 1:C = 0
+5050 FOR I = OE TO HM:S(I) = ZE: NEXT
+5060 VTAB 21: HTAB 1: PRINT SPC( 80)
+5070 HOME
+5080 VTAB 24: HTAB 1: PRINT "SAME SKILL LEVEL? (Y/N) ";: GET Y$
+5090 IF Y$ <  > "Y" THEN HOME : VTAB 24: HTAB 1: INPUT "SKILL LEVEL (1-5) ? ";SL
+5100 IF SL < OE OR SL > FV GOTO 5090
+5110 HOME
+5120 VTAB 24: HTAB 1: PRINT "SAME PLAYERS? (Y/N) ";: GET Y$
+5130 IF Y$ = "Y" THEN C = 0: GOSUB 2010: GOTO 7140
+5140 GOTO 7040
+5150 HOME : TEXT : END
+6000 REM  * HEADING *
+6010 PRINT  CHR$ (4)"BLOAD CHARGE SHAPES": POKE 232,0: POKE 233,96
+6020 ZE = 0:OE = 1:TW = 2:C = 0:TR = 3:FR = 4:FV = 5:S0 = 10:CG = 25:SS =  - 16336:TN = 279:O9 = 159
+6030 TEXT
+6040 FLASH
+6050 PRINT "***************************************"
+6060 FOR I = OE TO 21: PRINT "*";: HTAB 39: PRINT "*": NEXT
+6070 PRINT "***************************************"
+6080 NORMAL
+6090 GOSUB 9010
+6100 VTAB 3: HTAB 14: PRINT "-------------";
+6110 FOR I = OE TO TR: VTAB TR + I: HTAB 14: PRINT "!           !";: NEXT
+6120 VTAB 7: HTAB 14: PRINT "-------------";
+6130 VTAB 5: HTAB 17: PRINT "CHARGE!";
+6140 VTAB 10: HTAB 12: PRINT "A GAME FOR UP TO";
+6150 VTAB 12: HTAB 14: PRINT "FOUR PLAYERS";
+6160 VTAB 16: HTAB 11: PRINT "COPYRIGHT (C) 1982";
+6170 VTAB 18: HTAB 11: PRINT "BY C. ANTHONY RAY";
+6180 FOR I = 1 TO 1500: NEXT I
+6190 RETURN
+7000 REM  * START INFO *
+7010 HOME : HGR
+7020 VTAB 22: INPUT "SKILL LEVEL (1-5) > ";SL
+7030 IF SL < 1 OR SL > 5 THEN 7010
+7040 GOSUB 2010
+7050 HOME : VTAB 22: INPUT "HOW MANY PLAYERS? ";HM
+7060 H = 1:M = 1:MC = 1
+7070 IF HM < 1 OR HM > 4 THEN GOTO 7050
+7080 FOR I = 1 TO HM
+7090 HOME : VTAB 22: INPUT "WHAT'S YOUR NAME? ";NAME$(I)
+7100 PRINT "HI, ";NAME$(I)
+7110 FOR J = 1 TO 500: NEXT J
+7120 HOME
+7130 NEXT I
+7140 VTAB 21: HTAB 1: PRINT NAME$(1): IF HM > 1 THEN VTAB 21: HTAB 20: PRINT NAME$(2): IF HM > 2 THEN VTAB 22: HTAB 1: PRINT NAME$(3): IF HM > 3 THEN VTAB 22: HTAB 20: PRINT NAME$(4)
+7150 XP = 7:YP = 7: POKE 34,23
+7160 VTAB 24: HTAB 1: PRINT NAME$(MC);"'S TURN. DIRECTION (X,Y) ";
+7170 INPUT XO,YO: GOTO 1010
+8000 REM  * TICKS UP SCORE *
+8010 IF MC = 1 THEN HT = 12:VT = 21
+8020 IF MC = 2 THEN HT = 32:VT = 21
+8030 IF MC = 3 THEN HT = 12:VT = 22
+8040 IF MC = 4 THEN HT = 32:VT = 22
+8050 AM = S(MC)
+8060 D%(1) = AM / 100000:AM = AM - D%(1) * 100000
+8070 D%(2) = AM / 10000:AM = AM - D%(2) * 10000
+8080 D%(3) = AM / 1000:AM = AM - D%(3) * 1000
+8090 D%(4) = AM / 100:AM = AM - D%(4) * 100
+8100 D%(5) = AM / 10:AM = AM - D%(5) * 10
+8110 D%(6) = AM
+8120 FOR J = 6 TO OE STEP  - 1
+8130 FOR I = ZE TO D%(J)
+8140 HTAB HT + J: VTAB VT: PRINT I;
+8150 IM = PEEK (SS) - PEEK (SS) + PEEK (SS) - PEEK (SS) + PEEK (SS) - PEEK (SS)
+8160 NEXT I
+8170 NEXT J
+8180 RETURN
+9000 REM  * FANFARE *
+9010 FOR I = 0 TO 18
+9020 READ X
+9030 POKE 768 + I,X
+9040 NEXT
+9050 DATA 173,48,192,136,208,4,198,1,240,8,202,208,246,166,0,76,0,3,96
+9060 S = 768
+9070 POKE 1,50
+9080 POKE 0,91
+9090 CALL S
+9100 FOR I = 1 TO 3: NEXT I
+9110 POKE 1,33
+9120 POKE 0,82
+9130 CALL S
+9140 FOR I = 1 TO 3: NEXT I
+9150 POKE 1,33
+9160 POKE 0,75
+9170 CALL S
+9180 FOR I = 1 TO 3: NEXT I
+9190 POKE 1,130
+9200 POKE 0,66
+9210 CALL S
+9220 FOR I = 1 TO 30: NEXT I
+9230 POKE 1,50
+9240 POKE 0,75
+9250 CALL S
+9260 POKE 1,255
+9270 POKE 0,66
+9280 CALL S
+9290 RETURN
+</script>
+<script id="shapes" type="text/plain">
+6000- 04 00 0A 00 1D 00 27 00
+6008- 2A 00 24 24 37 36 36 36
+6010- 25 24 2D 2D 3C 3F 3F 3F
+6018- 3F 2E 2D 05 00 3F 3F 2E
+6020- 2D 2D 2D 25 3F 3F 00 2C
+6028- 3E 00 08 20 24 24 24 95
+6030- 92 62 0C 0C DC DB DB 13
+6038- 0E 0E 0E 0E 06 00
+</script>
+<script>
+(()=>{
+'use strict';
+const $=id=>document.getElementById(id);
+const SRC=$('prog').textContent.replace(/^\n/,'');
+$('list').textContent=SRC;
+const SHAPES=$('shapes').textContent.split('\n').map(l=>l.replace(/^[0-9A-F]{4}-/i,'').trim().split(/\s+/).filter(Boolean).map(h=>parseInt(h,16))).flat();
+const cv=$('scr'),g=cv.getContext('2d');
+const off=document.createElement('canvas');off.width=280;off.height=192;
+const og=off.getContext('2d'),img=og.createImageData(280,192);
+
+/* ---------- machine state ---------- */
+let M=null,runToken=0,speed=1,soundOn=true;
+class AErr extends Error{}
+const err=m=>new AErr(m);
+function newMachine(){
+  return {mem:new Uint8Array(65536),vars:Object.create(null),arrs:Object.create(null),data:[],dp:0,stack:[],
+    lines:[],lineIdx:new Map(),li:0,si:0,vt:0,t0:performance.now(),k:1/speed,running:false,waiting:false,
+    mode:'text',cx:0,cy:23,ch:new Uint8Array(960).fill(32),at:new Uint8Array(960),attr:0,
+    gfx:new Uint8Array(280*192),hcolor:3,scale:1,rot:0,hx:0,hy:0,clicks:[],lvl:0,curLine:0};
+}
+const K=n=>{M.vt+=n*M.k};
+
+/* ---------- text screen ---------- */
+function clearRow(r){M.ch.fill(32,r*40,r*40+40);M.at.fill(0,r*40,r*40+40)}
+function scrollUp(){
+  const wt=M.mem[34];
+  for(let r=wt;r<23;r++){M.ch.copyWithin(r*40,(r+1)*40,(r+1)*40+40);M.at.copyWithin(r*40,(r+1)*40,(r+1)*40+40)}
+  clearRow(23);K(9000);
+}
+function cr(){M.cx=0;M.cy++;if(M.cy>23){M.cy=23;scrollUp()}}
+function putc(c){
+  if(c==='\r'||c==='\n'){cr();return}
+  if(c==='\b'){if(M.cx>0)M.cx--;return}
+  const code=c.charCodeAt(0);
+  if(code<32)return;
+  if(M.cy>=0&&M.cy<24&&M.cx<40){const i=M.cy*40+M.cx;M.ch[i]=code;M.at[i]=M.attr}
+  M.cx++;if(M.cx>=40)cr();
+  K(150);
+}
+const puts=s=>{for(const c of s)putc(c)};
+function fmtNum(n){
+  if(Number.isInteger(n)&&Math.abs(n)<1e9)return String(n);
+  let s=n.toPrecision(9);
+  if(s.includes('e')){let[m,e]=s.split('e');if(m.includes('.'))m=m.replace(/0+$/,'').replace(/\.$/,'');return m+'E'+(e[0]==='-'?'-':'+')+e.replace(/^[+-]/,'').padStart(2,'0')}
+  if(s.includes('.'))s=s.replace(/0+$/,'').replace(/\.$/,'');
+  return s;
+}
+
+/* ---------- keyboard ---------- */
+let keyWait=null,lastKey=null;
+function pushKey(k){if(keyWait){const r=keyWait;keyWait=null;r(k)}else lastKey=k}
+function getKey(){
+  if(lastKey!==null){const k=lastKey;lastKey=null;return Promise.resolve(k)}
+  M.waiting=true;
+  return new Promise(r=>{keyWait=k=>{M.waiting=false;M.t0=performance.now()-M.vt/1000;r(k)}});
+}
+const coarse=matchMedia('(pointer:coarse)').matches;
+window.addEventListener('keydown',e=>{
+  if(e.target&&(e.target.tagName==='SELECT'||e.target.id==='snd'))return;
+  if(e.ctrlKey||e.metaKey||e.altKey)return;
+  if(e.key==='Enter'){pushKey('\r');e.preventDefault()}
+  else if(e.key==='Backspace'||e.key==='ArrowLeft'){pushKey('\b');e.preventDefault()}
+  else if(e.key.length===1&&!coarse){pushKey(e.key.toUpperCase());e.preventDefault()}
+});
+$('kb').addEventListener('input',e=>{for(const c of ($('kb').value||''))pushKey(c.toUpperCase());$('kb').value=''});
+async function readLine(){
+  let buf='';
+  for(;;){
+    const k=await getKey();
+    if(k==='\r'){putc('\r');return buf}
+    if(k==='\b'){if(buf.length){buf=buf.slice(0,-1);putc('\b');if(M.cy>=0){const i=M.cy*40+M.cx;M.ch[i]=32;M.at[i]=0}}continue}
+    if(buf.length<239){buf+=k;putc(k)}
+  }
+}
+
+/* ---------- speaker ---------- */
+function click(t){M.clicks.push(t)}
+let actx=null,ctxRef=0,vtRef=0,lastV=0;
+function flushAudio(){
+  if(!M)return;
+  if(!actx||!soundOn||speed!==1){M.lvl^=M.clicks.length&1;M.clicks.length=0;lastV=M.vt;return}
+  const a=lastV,b=M.vt;if(b<=a)return;
+  const sr=actx.sampleRate,n=Math.max(1,Math.round((b-a)*sr/1e6));
+  const buf=actx.createBuffer(1,n,sr),d=buf.getChannelData(0);
+  let lvl=M.lvl,j=0;const c=M.clicks;
+  for(let i=0;i<n;i++){
+    const t=a+i*1e6/sr;
+    while(j<c.length&&c[j]<=t){lvl^=1;j++}
+    d[i]=lvl?0.12:-0.12;
+  }
+  M.lvl=lvl;M.clicks=c.slice(j);
+  let when=ctxRef+(a-vtRef)/1e6;
+  if(when<actx.currentTime){vtRef=a;ctxRef=actx.currentTime+0.12;when=ctxRef}
+  const s=actx.createBufferSource();s.buffer=buf;s.connect(actx.destination);s.start(when);
+  lastV=b;
+}
+
+/* ---------- 6502 (the opcodes the fanfare routine uses) ---------- */
+function callMachine(addr){
+  const m=M.mem;let pc=addr,A=0,X=0,Y=0,z=false,cyc=0,steps=0;
+  const t0=M.vt,us=c=>t0+c*M.k/1.0205;
+  for(;;){
+    if(++steps>5e7)throw err('MACHINE CODE RUNAWAY');
+    const op=m[pc];
+    switch(op){
+      case 0xAD:{const a=m[pc+1]|m[pc+2]<<8;if(a===0xC030)click(us(cyc));A=0;pc+=3;cyc+=4;break}
+      case 0x88:Y=(Y-1)&255;z=Y===0;pc++;cyc+=2;break;
+      case 0xCA:X=(X-1)&255;z=X===0;pc++;cyc+=2;break;
+      case 0xC6:{const a=m[pc+1];m[a]=(m[a]-1)&255;z=m[a]===0;pc+=2;cyc+=5;break}
+      case 0xA6:X=m[m[pc+1]];z=X===0;pc+=2;cyc+=3;break;
+      case 0xD0:{const o=m[pc+1];pc+=2;if(!z){pc+=o<128?o:o-256;cyc+=3}else cyc+=2;break}
+      case 0xF0:{const o=m[pc+1];pc+=2;if(z){pc+=o<128?o:o-256;cyc+=3}else cyc+=2;break}
+      case 0x4C:pc=m[pc+1]|m[pc+2]<<8;cyc+=3;break;
+      case 0x60:M.vt=t0+cyc*M.k/1.0205;return;
+      default:throw err('UNSUPPORTED 6502 OPCODE '+op.toString(16));
+    }
+  }
+}
+
+/* ---------- hi-res graphics ---------- */
+const pat=(c,x)=>{const b=c&3;return b===0?0:b===3?1:b===1?(x&1):((x&1)^1)};
+function plot(x,y,xor){
+  if(x<0||x>279||y<0||y>191)return;
+  const c=M.hcolor,p=pat(c,x),i=y*280+x;
+  if(xor){if(p)M.gfx[i]=M.gfx[i]?0:((c&4)?2:1)}
+  else M.gfx[i]=p?((c&4)?2:1):0;
+}
+function hline(x0,y0,x1,y1){
+  const dx=Math.abs(x1-x0),dy=Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1;
+  let e=dx-dy,n=0;
+  for(;;){plot(x0,y0,false);n++;if(x0===x1&&y0===y1)break;const e2=2*e;if(e2>-dy){e-=dy;x0+=sx}if(e2<dx){e+=dx;y0+=sy}}
+  K(1500+60*n);
+}
+function drawShape(n,x,y,xor){
+  const m=M.mem,base=m[232]|m[233]<<8,cnt=m[base];
+  if(n<1||n>cnt)throw err('ILLEGAL QUANTITY');
+  let p=base+(m[base+2*n]|m[base+2*n+1]<<8);
+  const q=(Math.floor(M.rot/16))&3,DX=[0,1,0,-1],DY=[-1,0,1,0],sc=Math.max(1,M.scale|0);
+  let cx=x,cy=y,plots=0;
+  const sec=(v,canPlot)=>{
+    const d=((v&3)+q)&3;
+    for(let s=0;s<sc;s++){
+      if(canPlot&&(v&4)){plot(cx,cy,xor);plots++}
+      cx+=DX[d];cy+=DY[d];
+    }
+  };
+  for(let b=m[p];b!==0;b=m[++p]){
+    sec(b&7,true);
+    if((b>>3)===0)continue;
+    sec((b>>3)&7,true);
+    if((b>>6)===0)continue;
+    sec(b>>6,false);
+  }
+  K(1500+150*plots);
+}
+function renderGfx(){
+  const d=img.data,s=M.gfx;
+  for(let y=0;y<192;y++){
+    for(let x=0;x<280;x++){
+      const i=y*280+x,v=s[i],o=i*4;
+      if(!v){d[o]=d[o+1]=d[o+2]=0;d[o+3]=255;continue}
+      const l=x>0&&s[i-1],r=x<279&&s[i+1];
+      let R,G,B;
+      if(l||r){R=G=B=255}
+      else if(v===1){if(x&1){R=20;G=245;B=60}else{R=255;G=68;B=253}}
+      else{if(x&1){R=255;G=106;B=60}else{R=20;G=207;B=253}}
+      d[o]=R;d[o+1]=G;d[o+2]=B;d[o+3]=255;
+    }
+  }
+  og.putImageData(img,0,0);
+}
+
+/* ---------- Applesoft parser ---------- */
+const FUNCS=new Set(['INT','SQR','PEEK','RND','CHR$','ABS','LEN','ASC','STR$','VAL']);
+const norm=w=>{const sfx=/[$%]$/.test(w)?w.slice(-1):'';const b=sfx?w.slice(0,-1):w;return b.slice(0,2)+sfx};
+function compileLine(body,lineNo){
+  const s={t:body,i:0};const out=[];
+  const ws=()=>{while(s.i<s.t.length&&s.t[s.i]===' ')s.i++};
+  const eof=()=>{ws();return s.i>=s.t.length};
+  const peek=()=>{ws();return s.t[s.i]};
+  const wordAt=()=>{ws();const m=/^[A-Z][A-Z0-9]*[$%]?/.exec(s.t.slice(s.i));return m?m[0]:null};
+  const synt=()=>err('SYNTAX  ERROR IN '+lineNo);
+  const expect=c=>{ws();if(s.t[s.i]!==c)throw synt();s.i++};
+  const expectWord=w=>{if(wordAt()!==w)throw synt();s.i+=w.length};
+  const num=()=>{ws();const m=/^\d+/.exec(s.t.slice(s.i));if(!m)throw synt();s.i+=m[0].length;return +m[0]};
+
+  function relop(){
+    const save=s.i;let op='';
+    for(;;){ws();const c=s.t[s.i];if(c==='<'||c==='>'||c==='='){op+=c;s.i++}else break}
+    if(!op){s.i=save;return null}
+    if(op.includes('<')&&op.includes('>'))return '<>';
+    if(op.includes('<')&&op.includes('='))return '<=';
+    if(op.includes('>')&&op.includes('='))return '>=';
+    return op;
+  }
+  function expr(){return orE()}
+  function orE(){let l=andE();while(wordAt()==='OR'){s.i+=2;const a=l,b=andE();l=()=>{K(80);return (a()||b())?1:0}}return l}
+  function andE(){let l=notE();while(wordAt()==='AND'){s.i+=3;const a=l,b=notE();l=()=>{K(80);return (a()&&b())?1:0}}return l}
+  function notE(){if(wordAt()==='NOT'){s.i+=3;const a=notE();return()=>a()?0:1}return rel()}
+  function rel(){
+    let l=add();
+    for(;;){
+      const op=relop();if(!op)return l;
+      const a=l,b=add();
+      l=()=>{
+        const x=a(),y=b();K(250);
+        let r;
+        switch(op){case '=':r=x===y;break;case '<>':r=x!==y;break;case '<':r=x<y;break;case '>':r=x>y;break;case '<=':r=x<=y;break;default:r=x>=y}
+        return r?1:0;
+      };
+    }
+  }
+  function add(){
+    let l=mul();
+    for(;;){
+      const c=peek();
+      if(c!=='+'&&c!=='-')return l;
+      s.i++;const a=l,b=mul();
+      l=c==='+'?()=>{const x=a(),y=b();K(300);return (typeof x==='string')?x+y:x+y}:()=>{const x=a(),y=b();K(300);return x-y};
+    }
+  }
+  function mul(){
+    let l=unary();
+    for(;;){
+      const c=peek();
+      if(c!=='*'&&c!=='/')return l;
+      s.i++;const a=l,b=unary();
+      if(c==='*')l=()=>{const x=a(),y=b();K(350);return x*y};
+      else l=()=>{const x=a(),y=b();K(450);if(y===0)throw err('DIVISION BY ZERO  ERROR IN '+lineNo);return x/y};
+    }
+  }
+  function unary(){
+    const c=peek();
+    if(c==='-'){s.i++;const a=unary();return()=>{K(100);return -a()}}
+    if(c==='+'){s.i++;return unary()}
+    return pw();
+  }
+  function pw(){
+    let l=primary();
+    while(peek()==='^'){s.i++;const a=l,b=primary();l=()=>{K(1500);return Math.pow(a(),b())}}
+    return l;
+  }
+  function indices(){
+    expect('(');const idx=[expr()];
+    while(peek()===','){s.i++;idx.push(expr())}
+    expect(')');return idx;
+  }
+  function arrRef(key,idx){
+    return ()=>{
+      let a=M.arrs[key];
+      if(!a){a={dims:idx.map(()=>10),d:new Map()};M.arrs[key]=a}
+      const ix=idx.map(f=>Math.floor(f()));
+      if(ix.length!==a.dims.length)throw err('BAD SUBSCRIPT ERROR IN '+lineNo);
+      for(let k=0;k<ix.length;k++)if(ix[k]<0||ix[k]>a.dims[k])throw err('BAD SUBSCRIPT ERROR IN '+lineNo);
+      K(250);return {a,k:ix.join(',')};
+    };
+  }
+  function primary(){
+    const c=peek();
+    if(c==='('){s.i++;const e=expr();expect(')');return e}
+    if(c==='"'){s.i++;let j=s.t.indexOf('"',s.i);if(j<0)j=s.t.length;const v=s.t.slice(s.i,j);s.i=Math.min(j+1,s.t.length);return()=>v}
+    if(/[0-9.]/.test(c||'')){
+      const m=/^(\d+\.?\d*|\.\d+)(E[+-]?\d+)?/.exec(s.t.slice(s.i));if(!m)throw synt();s.i+=m[0].length;const v=+m[0];return()=>{K(60);return v}
+    }
+    const w=wordAt();if(!w)throw synt();s.i+=w.length;
+    if(FUNCS.has(w)){
+      expect('(');const a=expr();expect(')');
+      switch(w){
+        case 'INT':return()=>{const v=a();K(400);return Math.floor(v)};
+        case 'SQR':return()=>{const v=a();K(2500);if(v<0)throw err('ILLEGAL QUANTITY  ERROR IN '+lineNo);return Math.sqrt(v)};
+        case 'ABS':return()=>Math.abs(a());
+        case 'RND':return()=>{a();K(900);return Math.random()};
+        case 'CHR$':return()=>{K(400);return String.fromCharCode(a())};
+        case 'PEEK':return()=>{let ad=Math.floor(a());K(400);if(ad<0)ad+=65536;if(ad===0xC030){click(M.vt);return 0}return M.mem[ad]||0};
+        default:throw synt();
+      }
+    }
+    const key=norm(w),str=w.endsWith('$');
+    if(peek()==='('){
+      const ref=arrRef(key+'()',indices());
+      return()=>{const r=ref();const v=r.a.d.get(r.k);return v===undefined?(str?'':0):v};
+    }
+    return()=>{K(100);const v=M.vars[key];return v===undefined?(str?'':0):v};
+  }
+  function lvalue(){
+    const w=wordAt();if(!w||FUNCS.has(w))throw synt();s.i+=w.length;
+    const key=norm(w),intg=w.endsWith('%'),str=w.endsWith('$');
+    const conv=v=>{if(str){if(typeof v!=='string')throw err('TYPE MISMATCH  ERROR IN '+lineNo);return v}if(typeof v==='string')throw err('TYPE MISMATCH  ERROR IN '+lineNo);return intg?Math.floor(v):v};
+    if(peek()==='('){
+      const ref=arrRef(key+'()',indices());
+      return{str,set:v=>{const r=ref();r.a.d.set(r.k,conv(v))}};
+    }
+    return{str,set:v=>{M.vars[key]=conv(v)}};
+  }
+  const jump=n=>{const i=M.lineIdx.get(n);if(i===undefined)throw err('UNDEF\'D STATEMENT  ERROR IN '+lineNo);M.li=i;M.si=0};
+  const isWord=w=>wordAt()===w;
+
+  const lval=()=>lvalue();
+  const stmtEnd=()=>{ws()};
+  while(!eof()){
+    if(peek()===':'){s.i++;continue}
+    const w=wordAt();if(!w)throw synt();
+    switch(w){
+      case 'REM':s.i=s.t.length;break;
+      case 'DATA':{
+        s.i+=4;
+        for(;;){ws();let j=s.i;while(j<s.t.length&&s.t[j]!==','&&s.t[j]!==':')j++;
+          M.data.push(+s.t.slice(s.i,j).trim());s.i=j;if(s.t[s.i]===',')s.i++;else break}
+        break}
+      case 'GOTO':{s.i+=4;const n=num();out.push(()=>{K(300);jump(n)});break}
+      case 'GOSUB':{s.i+=5;const n=num();out.push(()=>{K(400);M.stack.push({t:'g',li:M.li,si:M.si});jump(n)});break}
+      case 'RETURN':{s.i+=6;out.push(()=>{K(300);for(;;){const f=M.stack.pop();if(!f)throw err('RETURN WITHOUT GOSUB  ERROR IN '+lineNo);if(f.t==='g'){M.li=f.li;M.si=f.si;return}}});break}
+      case 'END':{s.i+=3;out.push(()=>{M.running=false});break}
+      case 'DIM':{
+        s.i+=3;
+        do{
+          const nm=wordAt();s.i+=nm.length;const key=norm(nm)+'()';
+          expect('(');const ds=[expr()];while(peek()===','){s.i++;ds.push(expr())}expect(')');
+          out.push(()=>{M.arrs[key]={dims:ds.map(f=>Math.floor(f())),d:new Map()};K(500)});
+        }while(peek()===','&&(s.i++,true));
+        break}
+      case 'IF':{
+        s.i+=2;const cond=expr();
+        const skip=()=>{M.li++;M.si=0};
+        if(isWord('THEN')){
+          s.i+=4;ws();
+          if(/[0-9]/.test(s.t[s.i]||'')){const n=num();out.push(()=>{K(150);if(cond())jump(n);else skip()})}
+          else out.push(()=>{K(150);if(!cond())skip()});
+        }else if(isWord('GOTO')){s.i+=4;const n=num();out.push(()=>{K(150);if(cond())jump(n);else skip()})}
+        else throw synt();
+        break}
+      case 'FOR':{
+        s.i+=3;
+        const vw=wordAt();const key=norm(vw);s.i+=vw.length;
+        expect('=');const st=expr();expectWord('TO');const en=expr();
+        let sp=()=>1;if(isWord('STEP')){s.i+=4;sp=expr()}
+        out.push(()=>{
+          K(600);M.vars[key]=st();const e=en(),p=sp();
+          for(let i=M.stack.length-1;i>=0;i--){if(M.stack[i].t==='f'&&M.stack[i].v===key){M.stack.length=i;break}}
+          M.stack.push({t:'f',v:key,e,p,li:M.li,si:M.si});
+        });
+        break}
+      case 'NEXT':{
+        s.i+=4;let key=null;
+        if(!eof()&&peek()!==':'){const vw=wordAt();key=norm(vw);s.i+=vw.length}
+        out.push(()=>{
+          K(400);
+          for(let i=M.stack.length-1;i>=0;i--){
+            const f=M.stack[i];
+            if(f.t==='g')break;
+            if(f.t==='f'&&(key===null||f.v===key)){
+              M.stack.length=i+1;
+              const v=(M.vars[f.v]||0)+f.p;M.vars[f.v]=v;
+              if(f.p>=0?v<=f.e:v>=f.e){M.li=f.li;M.si=f.si}else M.stack.pop();
+              return;
+            }
+          }
+          throw err('NEXT WITHOUT FOR  ERROR IN '+lineNo);
+        });
+        break}
+      case 'PRINT':{
+        s.i+=5;const items=[];
+        while(!eof()&&peek()!==':'){
+          const c=peek();
+          if(c===';'){s.i++;items.push({semi:1});continue}
+          if(c===','){s.i++;items.push({comma:1});continue}
+          const ww=wordAt();
+          if(ww==='SPC'||ww==='TAB'){s.i+=3;expect('(');const e=expr();expect(')');items.push({spc:e});continue}
+          items.push({e:expr()});
+        }
+        const last=items[items.length-1];
+        const noCR=!!(last&&(last.semi||last.comma));
+        out.push(()=>{
+          K(300);let o='';
+          for(const it of items){
+            if(it.e){const v=it.e();o+=typeof v==='number'?fmtNum(v):v}
+            else if(it.spc)o+=' '.repeat(Math.max(0,Math.floor(it.spc())));
+            else if(it.comma){const col=(M.cx+[...o].length)%40;o+=' '.repeat(16-(col%16))}
+          }
+          if(o.charCodeAt(0)===4){dos(o.slice(1));return}
+          puts(o);if(!noCR)putc('\r');
+        });
+        break}
+      case 'HOME':{s.i+=4;out.push(()=>{const wt=M.mem[34];for(let r=wt;r<24;r++)clearRow(r);M.cx=0;M.cy=wt;K(15000)});break}
+      case 'HGR':{s.i+=3;out.push(()=>{M.gfx.fill(0);M.mode='mixed';K(90000)});break}
+      case 'TEXT':{s.i+=4;out.push(()=>{M.mode='text';M.mem[34]=0;M.cx=0;M.cy=23;K(2000)});break}
+      case 'FLASH':{s.i+=5;out.push(()=>{M.attr=1;K(200)});break}
+      case 'NORMAL':{s.i+=6;out.push(()=>{M.attr=0;K(200)});break}
+      case 'VTAB':{s.i+=4;const e=expr();out.push(()=>{const n=Math.floor(e());K(300);if(n<1||n>24)throw err('ILLEGAL QUANTITY  ERROR IN '+lineNo);M.cy=n-1});break}
+      case 'HTAB':{s.i+=4;const e=expr();out.push(()=>{const n=Math.floor(e());K(300);if(n<1||n>255)throw err('ILLEGAL QUANTITY  ERROR IN '+lineNo);M.cx=(n-1)%40});break}
+      case 'POKE':{s.i+=4;const a=expr();expect(',');const v=expr();out.push(()=>{let ad=Math.floor(a());const val=Math.floor(v());K(500);if(ad<0)ad+=65536;if(ad<65536&&ad!==0xC030)M.mem[ad]=val&255});break}
+      case 'CALL':{s.i+=4;const a=expr();out.push(()=>{let ad=Math.floor(a());if(ad<0)ad+=65536;K(400);callMachine(ad)});break}
+      case 'READ':{
+        s.i+=4;const ts=[lval()];while(peek()===','){s.i++;ts.push(lval())}
+        out.push(()=>{for(const t of ts){if(M.dp>=M.data.length)throw err('OUT OF DATA  ERROR IN '+lineNo);t.set(M.data[M.dp++]);K(500)}});
+        break}
+      case 'HCOLOR':{s.i+=6;expect('=');const e=expr();out.push(()=>{M.hcolor=Math.floor(e())&7;K(500)});break}
+      case 'SCALE':{s.i+=5;expect('=');const e=expr();out.push(()=>{M.scale=Math.floor(e());K(500)});break}
+      case 'ROT':{s.i+=3;expect('=');const e=expr();out.push(()=>{M.rot=Math.floor(e());K(500)});break}
+      case 'HPLOT':{
+        s.i+=5;const pts=[];let first=true,from=false;
+        if(isWord('TO')){s.i+=2;from=true}
+        for(;;){
+          const x=expr();expect(',');const y=expr();pts.push({x,y,line:from||!first});first=false;from=false;
+          if(isWord('TO')){s.i+=2;from=true;continue}
+          break;
+        }
+        out.push(()=>{
+          for(const p of pts){
+            const x=Math.floor(p.x()),y=Math.floor(p.y());
+            if(x<0||x>279||y<0||y>191)throw err('ILLEGAL QUANTITY  ERROR IN '+lineNo);
+            if(p.line)hline(M.hx,M.hy,x,y);else{plot(x,y,false);K(1500)}
+            M.hx=x;M.hy=y;
+          }
+        });
+        break}
+      case 'DRAW':case 'XDRAW':{
+        s.i+=w.length;const n=expr();expectWord('AT');const x=expr();expect(',');const y=expr();
+        const xor=w==='XDRAW';
+        out.push(()=>{const sn=Math.floor(n()),px=Math.floor(x()),py=Math.floor(y());if(px<0||px>279||py<0||py>191)throw err('ILLEGAL QUANTITY  ERROR IN '+lineNo);drawShape(sn,px,py,xor)});
+        break}
+      case 'GET':{s.i+=3;const t=lval();out.push(async()=>{K(300);const k=await getKey();t.set(k)});break}
+      case 'INPUT':{
+        s.i+=5;let prompt=null;
+        if(peek()==='"'){s.i++;let j=s.t.indexOf('"',s.i);if(j<0)j=s.t.length;prompt=s.t.slice(s.i,j);s.i=Math.min(j+1,s.t.length);if(peek()===';'||peek()===',')s.i++}
+        const ts=[lval()];while(peek()===','){s.i++;ts.push(lval())}
+        out.push(async()=>{
+          K(400);
+          for(;;){
+            if(prompt!==null)puts(prompt);
+            const vals=[];let bad=false,first=true;
+            while(vals.length<ts.length&&!bad){
+              if(prompt===null||!first)puts(first?'?':'??');
+              first=false;
+              const line=await readLine();
+              const parts=ts.length===1&&ts[0].str?[line]:line.split(',');
+              for(const p of parts){
+                if(vals.length>=ts.length)break;
+                const t=ts[vals.length];
+                if(t.str)vals.push(p.trim());
+                else if(/^\s*[+-]?(\d+\.?\d*|\.\d+)(E[+-]?\d+)?\s*$/i.test(p))vals.push(+p);
+                else{bad=true;break}
+              }
+            }
+            if(bad){puts('?REENTER');putc('\r');continue}
+            ts.forEach((t,i)=>t.set(vals[i]));
+            return;
+          }
+        });
+        break}
+      default:{
+        const t=lval();expect('=');const e=expr();
+        out.push(()=>{K(200);t.set(e())});
+      }
+    }
+  }
+  return out;
+}
+
+function dos(cmd){
+  const c=cmd.replace(/\r/g,'').trim().toUpperCase();
+  if(c==='BLOAD CHARGE SHAPES'){SHAPES.forEach((b,i)=>{M.mem[0x6000+i]=b});K(400000);return}
+  throw err('DOS COMMAND NOT SUPPORTED: '+c);
+}
+
+/* ---------- load program ---------- */
+function load(){
+  M.lines=[];
+  for(const raw of SRC.split('\n')){
+    const m=/^\s*(\d+)\s?(.*)$/.exec(raw);if(!m)continue;
+    M.lines.push({num:+m[1],body:m[2]});
+  }
+  M.lines.sort((a,b)=>a.num-b.num);
+  M.lines.forEach((l,i)=>M.lineIdx.set(l.num,i));
+  for(const l of M.lines)l.stmts=compileLine(l.body,l.num);
+}
+
+/* ---------- run loop ---------- */
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function run(token){
+  let n=0,lastYield=performance.now();
+  M.running=true;M.li=0;M.si=0;M.t0=performance.now();
+  setStatus('');
+  try{
+    while(M.running&&token===runToken){
+      const line=M.lines[M.li];if(!line)break;
+      const st=line.stmts[M.si++];
+      if(!st){M.li++;M.si=0;continue}
+      M.curLine=line.num;
+      const r=st();if(r&&r.then)await r;
+      if((++n&3)===0){
+        const now=performance.now(),ahead=M.vt-(now-M.t0)*1000;
+        if(ahead>12000){await sleep(Math.max(1,ahead/1000-6));lastYield=performance.now()}
+        else if(now-lastYield>12){await sleep(0);lastYield=performance.now()}
+      }
+    }
+    if(token===runToken){M.running=false;setStatus('Program ended.')}
+  }catch(e){
+    if(token!==runToken)return;
+    M.running=false;
+    if(e instanceof AErr){
+      M.mode='text';M.mem[34]=0;M.cy=23;M.cx=0;
+      puts('?'+e.message.replace(/ ERROR IN \d+$/,' ERROR'));
+      puts(' IN '+M.curLine);putc('\r');
+      setStatus('Stopped: '+e.message);
+    }else{console.error(e);setStatus('Internal error: '+e.message)}
+  }
+}
+function setStatus(t){$('status').textContent=t}
+
+/* ---------- display ---------- */
+let flash=false;setInterval(()=>{flash=!flash},250);
+const FONT='15px ui-monospace,"Courier New",Menlo,Consolas,monospace';
+function draw(){
+  if(M){
+    g.fillStyle='#000';g.fillRect(0,0,560,384);
+    let r0=0;
+    if(M.mode==='mixed'){renderGfx();g.imageSmoothingEnabled=false;g.drawImage(off,0,0,280,160,0,0,560,320);r0=20;g.fillStyle='#000';g.fillRect(0,320,560,64)}
+    g.font=FONT;g.textBaseline='middle';g.textAlign='center';
+    for(let r=r0;r<24;r++)for(let c=0;c<40;c++){
+      const i=r*40+c,code=M.ch[i],inv=M.at[i]===1&&flash;
+      if(inv){g.fillStyle='#e8e8e8';g.fillRect(c*14,r*16,14,16)}
+      if(code!==32){g.fillStyle=inv?'#000':'#e8e8e8';g.fillText(String.fromCharCode(code),c*14+7,r*16+8.5)}
+    }
+    if(M.waiting&&flash&&M.cy>=r0&&M.cy<24){g.fillStyle='#e8e8e8';g.fillRect(M.cx*14,M.cy*16,14,16)}
+    flushAudio();
+  }
+  requestAnimationFrame(draw);
+}
+
+/* ---------- controls ---------- */
+function startMachine(){
+  runToken++;
+  keyWait=null;lastKey=null;
+  M=newMachine();
+  try{load()}catch(e){setStatus('Load error: '+e.message);console.error(e);return}
+  lastV=0;
+  if(actx){vtRef=0;ctxRef=actx.currentTime+0.15}
+  run(runToken);
+  cv.focus();
+  if(coarse)$('kb').focus();
+}
+$('go').addEventListener('click',()=>{
+  try{const AC=window.AudioContext||window.webkitAudioContext;if(AC&&!actx){actx=new AC()}if(actx&&actx.state==='suspended')actx.resume()}catch(e){}
+  $('start').style.display='none';startMachine();
+});
+$('restart').addEventListener('click',()=>{$('start').style.display='none';startMachine()});
+$('speed').addEventListener('change',e=>{speed=+e.target.value;if(M)M.k=1/speed});
+$('snd').addEventListener('change',e=>{soundOn=e.target.checked});
+cv.addEventListener('click',()=>{if(coarse)$('kb').focus();else cv.focus()});
+window.__charge={get M(){return M},key:s=>{for(const c of s)pushKey(c==='\n'?'\r':c.toUpperCase())},setSpeed:v=>{speed=v;if(M)M.k=1/v}};
+draw();
+})();
+</script>
+</body></html>
