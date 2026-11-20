@@ -135,3 +135,23 @@ being converged, seen from the side or rear with the front in a mirror.
 - Enter goes to the next level after a win. The mouse wheel changes the
   strength of the strip under the cursor.
 - The DOS edition is unchanged by this.
+
+## 2026-11-20: electro groove music, AdLib style
+
+- **Browser edition.** A small two-operator FM synthesiser in Web Audio, arranged
+  like an OPL2 voice (a sine carrier frequency-modulated by a second sine, with
+  a decaying modulation index). The tune is an electro groove at 112 beats a
+  minute over Em7, Em7, C, D: four-on-the-floor FM kick, snare on two and four,
+  swung sixteenth hi-hats, a syncopated FM bass with two patterns, chord stabs
+  from the third bar, and a fill every eighth bar.
+- The music reacts to play: a lead arpeggio joins at half volume when half the
+  pictures are locked, and at full volume with a bell line when the level is won.
+- A Music button turns it off. Music starts with the first click or key, because
+  browsers do not allow sound before that.
+- **DOS edition.** The same groove on the real OPL2: six tracks (bass, stab,
+  lead, kick, snare, hi-hat) with four new instrument patches. It is the title
+  theme; the bench plays it without the lead and quieter. The sequencer now
+  takes six tracks, and jingles moved to channels 6 and 7.
+- Checked by measurement, not by ear: the browser tune was rendered offline
+  (no clipping, kicks stand out on the beat); the DOS tune was recorded from
+  the emulated card (bass E, E, C, D by bar, about 113 beats a minute).

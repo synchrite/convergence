@@ -31,7 +31,10 @@ libraries. Open the file to run it.
   step (quadrupole: scaled by position across the strip). Levels come from
   `cfg(L)`: charges, aim points, tolerances and strip budget; `genLevel` tries
   seeds until the start is misconverged enough. Only the active dot's three
-  beams are drawn. `window.__cv` exposes the state for tests.
+  beams are drawn. `window.__cv` exposes the state for tests. Music is a
+  step sequencer (`mStep`) scheduled 150 ms ahead on the audio clock; voices
+  are built per note by `fm()` (carrier, modulator, two envelopes). `window.__mus`
+  lets a test render it into an `OfflineAudioContext`.
 - **`v2/index.html`** integrates `du/dt = (q/m)(E + v x B)` with a relativistic
   Boris pusher, 420 steps a trace. Spot position against drive is tabulated per
   axis and inverted for S-correction. `window.__v2` exposes the state.

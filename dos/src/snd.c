@@ -27,7 +27,7 @@ static int adlib_detect(void)
     return (a & 0xE0) == 0 && (b & 0xE0) == 0xC0;
 }
 typedef struct { u8 mc, cc, ml, cl, mad, cad, msr, csr, mw, cw, fb; } Ins;
-enum { I_LEAD, I_BASS, I_PAD, I_PLUCK, I_TICK, I_CHIME, I_HUM, I_BUZZ, I_KICK };
+enum { I_LEAD, I_BASS, I_PAD, I_PLUCK, I_TICK, I_CHIME, I_HUM, I_BUZZ, I_KICK, I_EBASS, I_SNARE, I_HAT, I_STAB };
 static const Ins ins[] = {
     {0x21, 0x21, 0x1A, 0x00, 0xF2, 0xF2, 0x53, 0x74, 0, 0, 0x0C},  /* lead */
     {0x01, 0x01, 0x10, 0x00, 0xF2, 0xF3, 0x66, 0x77, 0, 0, 0x08},  /* bass */
@@ -37,7 +37,11 @@ static const Ins ins[] = {
     {0x07, 0x01, 0x20, 0x00, 0xF3, 0xF3, 0x35, 0x36, 0, 0, 0x00},  /* chime */
     {0x21, 0x21, 0x08, 0x00, 0xF0, 0xF0, 0x0F, 0x0F, 1, 0, 0x0E},  /* hum */
     {0x21, 0x22, 0x00, 0x00, 0xF1, 0xF1, 0x0F, 0x0F, 2, 2, 0x0E},  /* buzz */
-    {0x00, 0x00, 0x00, 0x00, 0xF7, 0xF6, 0xF7, 0xF6, 0, 0, 0x0A}   /* kick */
+    {0x00, 0x00, 0x00, 0x00, 0xF7, 0xF6, 0xF7, 0xF6, 0, 0, 0x0A},  /* kick */
+    {0x21, 0x21, 0x0E, 0x00, 0xF4, 0xF3, 0x55, 0x76, 0, 0, 0x0A},  /* electro bass */
+    {0x0C, 0x01, 0x00, 0x00, 0xF8, 0xF7, 0xF7, 0xF7, 0, 0, 0x0E},  /* snare: heavy feedback for noise */
+    {0x0F, 0x0C, 0x00, 0x0A, 0xF9, 0xFA, 0xF9, 0xFA, 0, 0, 0x0E},  /* hi-hat */
+    {0x22, 0x21, 0x14, 0x04, 0xF5, 0xF4, 0x45, 0x56, 1, 0, 0x08}   /* stab */
 };
 static const u8 opoff[9] = { 0, 1, 2, 8, 9, 10, 16, 17, 18 };
 static const u16 fnum[12] = { 0x157, 0x16B, 0x181, 0x198, 0x1B0, 0x1CA, 0x1E5, 0x202, 0x220, 0x241, 0x263, 0x287 };
@@ -74,27 +78,34 @@ static void opl_reset(void)
 
 /* ---------------- songs ---------------- */
 #define MAXSTEP 128
-typedef struct { int stepms, nch, loop; const char *trk[4]; u8 in[4], att[4]; } Song;
+#define NTRK 6
+typedef struct { int stepms, nch, loop; const char *trk[NTRK]; u8 in[NTRK], att[NTRK]; } Song;
+/* Electro groove, 112 beats a minute, four bars: Em7 Em7 C D. Sixteen steps to the bar. */
+#define G_BASS "E2 . . E2 . E3 . E2 . D3 . E2 . . B2 D3 E2 . . E2 . E3 . E2 . D3 . E2 . . B2 D3 " \
+               "C2 . . C2 . C3 . C2 . A#2 . C2 . . G2 A#2 D2 . . D2 . D3 . D2 . C3 . D2 . . A2 C3"
+#define G_STAB "- - B4 - - B4 - - - - B4 - - B4 - B4 - - B4 - - B4 - - - - B4 - - B4 - B4 " \
+               "- - C5 - - C5 - - - - C5 - - C5 - C5 - - D5 - - D5 - - - - D5 - - D5 - D5"
+#define G_LEAD "E5 G5 B5 D6 E6 D6 B5 G5 E5 G5 B5 E6 G6 E6 B5 G5 E5 G5 B5 D6 E6 D6 B5 G5 E5 G5 B5 E6 G6 E6 B5 G5 " \
+               "E5 G5 C6 E6 E6 E6 C6 G5 E5 G5 C6 E6 G6 E6 C6 G5 F#5 A5 D6 F#6 F#6 F#6 D6 A5 F#5 A5 D6 F#6 A6 F#6 D6 A5"
+#define G_KICK "C2 . . . C2 . . . C2 . . . C2 . . . C2 . . . C2 . . . C2 . . . C2 . . . " \
+               "C2 . . . C2 . . . C2 . . . C2 . . . C2 . . . C2 . . . C2 . . . C2 . C2 ."
+#define G_SNARE "- - - - D3 . . . - - - - D3 . . . - - - - D3 . . . - - - - D3 . . . " \
+                "- - - - D3 . . . - - - - D3 . . . - - - - D3 . . . - - - - D3 D3 D3 D3"
+#define G_HAT  "F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 " \
+               "F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6"
 static const Song songs[] = {
   { 0, 0, 0, {0}, {0}, {0} },
-  { 125, 4, 1, {   /* title: Am F C G */
-    "A1 . A1 . A2 . A1 . A1 . A2 . E2 . A1 . F1 . F1 . F2 . F1 . F1 . F2 . C2 . F1 . C2 . C2 . C3 . C2 . C2 . C3 . G2 . C2 . G1 . G1 . G2 . G1 . G1 . G2 . D2 . B1 .",
-    "A3 C4 E4 A4 E4 C4 A3 C4 E4 A4 E4 C4 A3 C4 E4 C4 F3 A3 C4 F4 C4 A3 F3 A3 C4 F4 C4 A3 F3 A3 C4 A3 C4 E4 G4 C5 G4 E4 C4 E4 G4 C5 G4 E4 C4 E4 G4 E4 G3 B3 D4 G4 D4 B3 G3 B3 D4 G4 D4 B3 G3 B3 D4 B3",
-    "E5 . . . . . D5 . C5 . . . A4 . . . C5 . . . . . A4 . F4 . . . A4 . C5 . E5 . . . . . G5 . E5 . . . C5 . . . D5 . . . . . B4 . G4 . . . B4 . D5 .",
-    "C4 . . . . . . . . . . . . . . . A3 . . . . . . . . . . . . . . . G3 . . . . . . . . . . . . . . . B3 . . . . . . . . . . . . . . ." },
-    { I_BASS, I_PLUCK, I_LEAD, I_PAD }, { 4, 14, 8, 18 } },
-  { 210, 3, 1, {   /* bench: Dm7 G C A7, quiet */
-    "D2 . . . . . . . A2 . . . . . . . G1 . . . . . . . D2 . . . . . . . C2 . . . . . . . G2 . . . . . . . A1 . . . . . . . E2 . . . . . . .",
-    "- - F4 . A4 . C5 . - - A4 . F4 . D4 . - - D4 . G4 . B4 . - - G4 . D4 . B3 . - - E4 . G4 . B4 . - - G4 . E4 . C4 . - - E4 . G4 . C#5 . - - A4 . E4 . C#4 .",
-    "F3 . . . . . . . . . . . . . . . F3 . . . . . . . . . . . . . . . E3 . . . . . . . . . . . . . . . G3 . . . . . . . . . . . . . . .", 0 },
-    { I_BASS, I_PLUCK, I_PAD, 0 }, { 14, 22, 26, 0 } }
+  { 134, 6, 1, { G_BASS, G_STAB, G_LEAD, G_KICK, G_SNARE, G_HAT },      /* title: the full groove */
+    { I_EBASS, I_STAB, I_PLUCK, I_KICK, I_SNARE, I_HAT }, { 0, 12, 14, 0, 6, 20 } },
+  { 134, 6, 1, { G_BASS, G_STAB, "-", G_KICK, G_SNARE, G_HAT },         /* bench: no lead, quieter */
+    { I_EBASS, I_STAB, I_PLUCK, I_KICK, I_SNARE, I_HAT }, { 10, 24, 40, 10, 18, 30 } }
 };
 static const Song jings[] = {
   { 90, 2, 0, { "C5 E5 G5 C6 . G5 C6 . . . . -", "C4 . . G4 . . C5 . . . . -", 0, 0 }, { I_CHIME, I_PLUCK }, { 0, 6 } },
   { 130, 2, 0, { "E4 . D#4 . D4 . C#4 . . . . -", "A2 . . . . . A1 . . . . -", 0, 0 }, { I_LEAD, I_BASS }, { 6, 4 } },
   { 70, 1, 0, { "G5 C6 E6 . -", 0, 0, 0 }, { I_CHIME }, { 0 } }
 };
-typedef struct { const Song *s; u8 note[4][MAXSTEP]; int len, pos, acc, base, on; } Player;
+typedef struct { const Song *s; u8 note[NTRK][MAXSTEP]; int len, pos, acc, base, on; } Player;
 static Player mus, jin;
 
 static int parse(const char *t, u8 *out)
@@ -118,7 +129,7 @@ static int parse(const char *t, u8 *out)
 static void play_start(Player *p, const Song *s, int base)
 {
     int c, l;
-    for (c = 0; c < 4; c++) if (p->on && snd_adlib) opl_off(p->base + c);
+    for (c = 0; c < (p->s ? p->s->nch : 0); c++) if (p->on && snd_adlib) opl_off(p->base + c);
     p->s = s; p->base = base; p->pos = 0; p->acc = 0; p->len = 0; p->on = 0;
     if (!s || !s->nch) return;
     for (c = 0; c < s->nch; c++) {
@@ -309,7 +320,7 @@ void snd_jingle(int n)
 {
     static const u16 w[] = { 523, 80, 659, 80, 784, 80, 1047, 200 }, f[] = { 330, 150, 294, 150, 262, 300 }, s[] = { 784, 60, 1047, 60, 1319, 120 };
     if (!snd_sfx_on) return;
-    if (snd_adlib) { play_start(&jin, &jings[n], 5); return; }
+    if (snd_adlib) { play_start(&jin, &jings[n], 6); return; }
     if (n == JING_WIN) spk_seq(w, 4); else if (n == JING_FAIL) spk_seq(f, 3); else spk_seq(s, 3);
 }
 void snd_poll(u32 now)

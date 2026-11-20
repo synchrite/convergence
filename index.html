@@ -38,6 +38,7 @@ button[aria-pressed=true]{background:#14301f;border-color:var(--acc)}
   <button id="bNext" title="Next level (N)">Level &gt;</button>
   <button id="bCrt" aria-pressed="true" title="Scanlines and vignette (F)">CRT filter</button>
   <button id="bSnd" aria-pressed="true" title="Sound effects on or off">Sound</button>
+  <button id="bMus" aria-pressed="true" title="Music on or off">Music</button>
 </div>
 <div id="msg" role="status"></div>
 <p class="keys">Mouse: click inside the tube to place a strip, drag a strip to move it, click a strip to remove it, right click or R to rotate. Click a test dot to see its three beams. Keys: R rotate, P polarity, T dipole or quadrupole, 1 2 3 strength (these change the strip under the cursor, or the next strip), Tab next dot, arrows and Space place by keyboard, U undo, C clear, A auto-place, N next level, F filter.</p>
@@ -256,7 +257,7 @@ const SPR=[
 ];
 /* sound: small synthesised effects, started by the first click or key */
 let actx=null,soundOn=true;
-function audio(){if(!actx){try{actx=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(actx&&actx.state==='suspended')actx.resume()}
+function audio(){if(!actx){try{actx=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(actx&&actx.state==='suspended')actx.resume();if(actx&&musicOn)musicStart()}
 function beep(f,d,type,vol,when,slide){
   if(!actx||!soundOn)return;
   const t=actx.currentTime+(when||0),o=actx.createOscillator(),g=actx.createGain();
@@ -272,6 +273,68 @@ const sfx={
   lose:()=>beep(200,.1,'sawtooth',.04,0,120),
   win:()=>{[523,659,784,1047,1319,1568].forEach((f,i)=>beep(f,.16,'square',.07,i*.09));beep(2093,.5,'triangle',.08,.56)}
 };
+/* ---------- music: AdLib-style two-operator FM, electro groove ----------
+   Each voice is a sine carrier whose frequency is modulated by a second sine (the OPL2 arrangement),
+   with a decaying modulation index for the plucked, metallic FM sound. Drums are FM and noise. */
+let musicOn=true,mGain=null,noiseBuf=null,mus={step:0,next:0,timer:null,heat:0};
+const BPM=112,STEP=60/BPM/4,mtof=m=>440*Math.pow(2,(m-69)/12);
+function mInit(){
+  if(mGain||!actx)return;
+  const comp=actx.createDynamicsCompressor();comp.threshold.value=-14;comp.ratio.value=4;
+  mGain=actx.createGain();mGain.gain.value=.55;mGain.connect(comp);comp.connect(actx.destination);
+  noiseBuf=actx.createBuffer(1,actx.sampleRate*.4,actx.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+}
+function fm(f,t,d,o){   // o: ratio, index, idec (index decay to this fraction), vol, att
+  const c=actx.createOscillator(),m=actx.createOscillator(),mg=actx.createGain(),g=actx.createGain();
+  c.frequency.setValueAtTime(f,t);m.frequency.setValueAtTime(f*o.ratio,t);
+  if(o.drop){c.frequency.exponentialRampToValueAtTime(o.drop,t+d);m.frequency.exponentialRampToValueAtTime(o.drop*o.ratio,t+d)}
+  mg.gain.setValueAtTime(f*o.index,t);mg.gain.exponentialRampToValueAtTime(Math.max(.5,f*o.index*(o.idec||.1)),t+d);
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(o.vol,t+(o.att||.004));g.gain.exponentialRampToValueAtTime(.0006,t+d);
+  m.connect(mg);mg.connect(c.frequency);c.connect(g);g.connect(mGain);
+  c.start(t);m.start(t);c.stop(t+d+.03);m.stop(t+d+.03);
+}
+function noise(t,d,vol,hp){
+  const n=actx.createBufferSource(),f=actx.createBiquadFilter(),g=actx.createGain();
+  n.buffer=noiseBuf;f.type='highpass';f.frequency.value=hp;g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0006,t+d);
+  n.connect(f);f.connect(g);g.connect(mGain);n.start(t);n.stop(t+d+.02);
+}
+const V={
+  bass:{ratio:1,index:3.2,idec:.12,vol:.42},
+  stab:{ratio:2,index:2.4,idec:.25,vol:.11,att:.006},
+  lead:{ratio:3,index:1.6,idec:.2,vol:.10},
+  bell:{ratio:3.5,index:2.2,idec:.05,vol:.07},
+  kick:{ratio:.5,index:2.5,idec:.02,vol:.75,drop:42},
+  tom:{ratio:1.4,index:3,idec:.05,vol:.3,drop:90}
+};
+const ROOTS=[40,40,36,38];                                    // E, E, C, D
+const BASS_A=[0,null,null,0,null,12,null,0,null,10,null,0,null,null,7,10];
+const BASS_B=[0,null,12,null,0,null,10,12,null,0,null,7,null,10,12,null];
+const CH=[[52,55,59,62],[52,55,59,62],[52,55,60,64],[54,57,62,66]];   // Em7, Em7, C, D
+const STAB=[0,0,1,0,0,1,0,0,0,0,1,0,0,1,0,1];
+const ARP=[0,1,2,3,4,3,2,1,0,1,2,4,5,4,2,1];                 // indices into the bar's chord tones, over two octaves
+function mStep(n,t){
+  const bar=(n>>4),b4=bar%4,st=n&15,sec=(bar>>3)&1,root=ROOTS[b4],sw=(st&1)?STEP*.16:0,T=t+sw;
+  // drums
+  if(st%4===0||(b4===3&&st===14))fm(150,T,.2,V.kick);
+  if(st===4||st===12){noise(T,.16,.32,1500);fm(190,T,.09,V.tom)}
+  if(bar%8===7&&st>=12){noise(T,.07,.2,2000);fm(220-st*6,T,.08,V.tom)}                  // fill
+  noise(T,(st%4===2)?.09:.03,(st%4===2)?.13:(st&1?.05:.08),7000);                       // hats, open on the off-beat
+  // bass
+  const bn=(sec?BASS_B:BASS_A)[st];
+  if(bn!==null)fm(mtof(root+bn),T,STEP*1.7,V.bass);
+  // chord stabs come in after the first two bars
+  if(bar>=2&&STAB[st])for(const m of CH[b4])fm(mtof(m+12),T,STEP*1.4,V.stab);
+  // lead: joins as pictures lock, full when the level is won
+  if(mus.heat>0){const o={...V.lead,vol:V.lead.vol*mus.heat};const tn=CH[b4].concat(CH[b4].map(m=>m+12));fm(mtof(tn[ARP[(st+(sec?4:0))&15]]+24),T,STEP*1.2,o);
+    if(mus.heat>=1&&st%8===0)fm(mtof(CH[b4][2]+36),T,STEP*6,V.bell)}
+}
+function mTick(){
+  if(!actx||!musicOn)return;
+  if(mus.next<actx.currentTime)mus.next=actx.currentTime+.05;
+  while(mus.next<actx.currentTime+.15){mStep(mus.step++,mus.next);mus.next+=STEP}
+}
+function musicStart(){if(!actx||mus.timer)return;mInit();mus.next=actx.currentTime+.08;mus.timer=setInterval(mTick,30)}
+function musicStop(){if(mus.timer){clearInterval(mus.timer);mus.timer=null}}
 /* sparks */
 let parts=[];
 function burst(x,y,n,col){for(let i=0;i<n;i++){const a=Math.random()*6.283,v=.4+Math.random()*1.8;parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-.4,life:18+Math.random()*22,c:col||[1,1,1]})}}
@@ -340,6 +403,7 @@ function drawPanel(ev,tick){
     wasOk[i]=ok;
   });
   wasOk.length=n;
+  {const okc=ev.rows.filter(r=>r.conv<=CONV_TOL&&(PUR_TOL==null||r.pur<=PUR_TOL)).length;mus.heat=passed?1:okc*2>=n&&okc>0?.5:0}
 }
 function drawHud(ev){
   rect(0,0,W,16,rgb(10,16,46));
@@ -447,7 +511,8 @@ $('bUndo').onclick=undo;$('bClear').onclick=clear;$('bAuto').onclick=auto;
 $('bNext').onclick=()=>go(level+1);$('bPrev').onclick=()=>go(level-1);
 $('bCrt').onclick=()=>{const m=$('mon');m.classList.toggle('crt');$('bCrt').setAttribute('aria-pressed',m.classList.contains('crt'))};
 $('bSnd').onclick=()=>{audio();soundOn=!soundOn;$('bSnd').setAttribute('aria-pressed',soundOn);if(soundOn)sfx.turn()};
-document.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{audio();b.blur()}));
+$('bMus').onclick=()=>{musicOn=!musicOn;$('bMus').setAttribute('aria-pressed',musicOn);if(musicOn){audio();musicStart()}else musicStop()};
+document.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{if(b.id!=='bMus')audio();b.blur()}));
 window.addEventListener('keydown',e=>{
   if(e.ctrlKey||e.metaKey||e.altKey)return;
   audio();
@@ -466,6 +531,7 @@ window.addEventListener('keydown',e=>{
 window.addEventListener('hashchange',()=>{const m=/^#level-(\d+)$/.exec(location.hash);if(m&&+m[1]!==level)go(+m[1])});
 {const m=/^#level-(\d+)$/.exec(location.hash);level=m?Math.max(1,+m[1]):1;genLevel(level);say(intro())}
 sync();requestAnimationFrame(frame);
+window.__mus={mus,mStep,mInit,get ctx(){return actx},set ctx(v){actx=v;mGain=null},V,STEP};
 window.__cv={get ions(){return ions},get strips(){return strips},evaluate,autoPlace,genLevel,go,budget,set strips(v){strips=v},get level(){return level},get passed(){return passed}};
 })();
 </script>
