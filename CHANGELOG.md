@@ -91,3 +91,25 @@ this project grew out of that work.
 - Pushed to its own repository, separate from the 1982 original, so the two
   never share an address.
 - Added `README.md`, `docs/INSTALL.md`, `docs/DEVELOPMENT.md` and this file.
+
+## 2026-11-20: browser edition simplified
+
+Feedback: the puzzle was too complicated and too hard to win, and fifteen beams
+on screen at once were confusing.
+
+- Only one set of three beams is drawn at a time: the red, green and blue beams
+  aimed at the active test dot. The arrow follows the worst dot; click a dot (or
+  press Tab) to choose one. Other dots show only where they land.
+- New difficulty ramp. Level 1 is one charge and one dot; level 2 two charges;
+  level 3 two dots; level 4 three dots. Purity is not required until level 5.
+  Five dots and the tight tolerance (2 pixels) start at level 7.
+- Convergence tolerance is 3 pixels on levels 1 to 3, 2.5 on 4 and 5, then 2.
+- Levels are chosen so they start visibly misconverged, and the early ones not
+  wildly so. Checked with the auto-placer: levels 1 to 6 can each be solved
+  with a single strip, levels 7 to 9 with three or four.
+- Strips can be dragged. R, P, T and 1 2 3 change the strip under the cursor.
+  A plain click on a strip still removes it.
+- The tool starts as a quadrupole across the beams, which is what level 1 needs.
+  Each of the first five levels opens with one line of advice.
+- Stars now depend on strips used against the level's budget.
+- The DOS edition is unchanged by this.
