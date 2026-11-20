@@ -155,3 +155,18 @@ being converged, seen from the side or rear with the front in a mirror.
 - Checked by measurement, not by ear: the browser tune was rendered offline
   (no clipping, kicks stand out on the beat); the DOS tune was recorded from
   the emulated card (bass E, E, C, D by bar, about 113 beats a minute).
+
+## 2026-11-20: tutorial
+
+- The browser edition has a tutorial, shown as level 0, that explains the game
+  by showing how the beams interact. Five steps on one playfield:
+  1. Three beams leave the gun and, left alone, meet at the screen: one white picture.
+  2. A stray field appears and pulls the nearest beam most: three coloured ghosts.
+  3. You place and drag a dipole strip: all three beams move together, and the ghosts stay apart.
+  4. You place a quadrupole strip across the beams, flip it if needed, and the picture goes white.
+  5. A summary, then level 1.
+- It opens by itself the first time the game is played (remembered in the
+  browser), and from the Tutorial button or the `#tutorial` address at any time.
+  Enter, or a click on the text box, moves to the next step; step 4 ends only
+  when the picture is fixed.
+- Fixed while testing: sprite choice crashed on level 0.
