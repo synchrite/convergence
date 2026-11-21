@@ -14,7 +14,8 @@ original has its own repository and site; nothing here replaces it.
 | Path | What it is | Runs on |
 |---|---|---|
 | `dos/CONVERGE.EXE` | **DOS edition.** A CRT service-bench game plus a test-pattern generator for a real monitor | DOS, 486 class PC, SVGA, AdLib / Sound Blaster |
-| `index.html` | Index page: links to what is below | Browser |
+| `index.html` | **Main page.** The DOS edition running in a DOS emulator (js-dos), with links to the rest | Browser, served over http |
+| `play/` | The emulator and the bundle it loads; see `play/README.md` | |
 | `archive/` | Shelved games: the Convergence Bench and Inside the tube. Not linked from the site; see `archive/README.md` | Browser |
 | `v2/index.html` | Physics lab: a beam steered by real electric and magnetic deflection, with lessons | Browser |
 | `classic/index.html` | Charge! Phosphor: land 16 shots evenly on a phosphor wall | Browser |
@@ -35,7 +36,7 @@ original has its own repository and site; nothing here replaces it.
 
 ## Quick start
 
-- **Browser:** open `index.html` and choose. No install, no network needed.
+- **Browser:** open the site's main page; the DOS edition starts in an emulator. From a local copy, serve the folder over http (for example `python3 -m http.server`), since the emulator does not load from a `file://` address. The other pages open directly.
 - **DOS:** copy `dos/CONVERGE.EXE` to the PC and run `CONVERGE`. See `docs/INSTALL.md`.
 
 ## Status

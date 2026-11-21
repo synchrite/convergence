@@ -1,22 +1,47 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Charge! Convergence</title>
+<link rel="stylesheet" href="play/js-dos.css">
 <style>
 :root{--bg:#05070c;--panel:#0c1222;--line:#1f2b48;--fg:#dbe5ff;--dim:#8493b8;--acc:#6dff9a}
 html,body{background:var(--bg)}
 body{margin:0;color:var(--fg);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-main{max-width:720px;margin:0 auto;padding:24px 16px 48px}
+main{max-width:980px;margin:0 auto;padding:20px 16px 48px}
 h1{font-size:24px;margin:0 0 6px}
-p{color:var(--dim);margin:0 0 14px}
-a.card{display:block;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:10px 0;color:var(--fg);text-decoration:none}
+p{color:var(--dim);margin:0 0 12px}
+a{color:var(--acc)}
+#dos{width:100%;aspect-ratio:4/3;background:#000;border:2px solid var(--line);border-radius:8px;overflow:hidden}
+table{border-collapse:collapse;margin:0 0 14px;font-size:14px}
+td{padding:3px 14px 3px 0;color:var(--dim)}td:first-child{color:var(--fg);white-space:nowrap}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+a.card{display:block;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;color:var(--fg);text-decoration:none}
 a.card:hover,a.card:focus-visible{border-color:var(--acc);outline:none}
-a.card b{display:block;color:var(--acc)}
-a.card span{color:var(--dim);font-size:14px}
+a.card b{display:block;color:var(--acc)}a.card span{color:var(--dim);font-size:14px}
 </style></head><body><main>
 <h1>Charge! Convergence</h1>
-<p>Games and tools about electron beams and cathode ray tubes. Inspired by <i>Charge!</i> by C. Anthony Ray, published in BYTE magazine in December 1982. These are different games from the original, not new versions of it.</p>
+<p>A game about servicing a CRT monitor, written for DOS on a 486 and running here in a DOS emulator. Inspired by <i>Charge!</i> by C. Anthony Ray, published in BYTE magazine in December 1982. This is a different game from the original, not a new version of it.</p>
+<div id="dos"></div>
+<p style="margin-top:10px">Click the screen first so the keys go to the game. It takes a few seconds to start.</p>
+<table>
+<tr><td>Up, Down, Enter, Esc</td><td>Menus</td></tr>
+<tr><td>Tab</td><td>Next group of controls on the bench</td></tr>
+<tr><td>Up, Down</td><td>Pick a control</td></tr>
+<tr><td>Left, Right</td><td>Turn it (Page Up, Page Down for bigger steps)</td></tr>
+<tr><td>F1 to F5</td><td>Test pattern</td></tr>
+<tr><td>D, H, M</td><td>Degauss, hint, music on or off</td></tr>
+<tr><td>Enter</td><td>Ship the set to the customer</td></tr>
+</table>
+<p>The same program runs on a real PC: <a href="dos/CONVERGE.EXE">download CONVERGE.EXE</a> (486, SVGA with VESA, AdLib or Sound Blaster). Never open a real monitor unless you are trained: it holds lethal voltages.</p>
+<div class="cards">
 <a class="card" href="v2/index.html"><b>Physics lab</b><span>A beam steered by electric and magnetic deflection, with lessons.</span></a>
 <a class="card" href="classic/index.html"><b>Charge! Phosphor</b><span>Land 16 shots evenly on a phosphor wall.</span></a>
-<a class="card" href="original/index.html"><b>The 1982 original</b><span>C. Anthony Ray's Applesoft BASIC listing, as printed, running in an emulator.</span></a>
-<a class="card" href="dos/CONVERGE.EXE"><b>DOS edition (download)</b><span>CONVERGE.EXE for a 486 class PC with SVGA: a monitor service game and test patterns for a real CRT.</span></a>
-</main></body></html>
+<a class="card" href="original/index.html"><b>The 1982 original</b><span>C. Anthony Ray's Applesoft BASIC listing, as printed, in an emulator.</span></a>
+</div>
+<p style="margin-top:14px;font-size:13px">The emulator is <a href="https://js-dos.com">js-dos</a> (DOSBox compiled for the browser), GPL version 2; see <a href="play/README.md">play/README.md</a>.</p>
+</main>
+<script src="play/js-dos.js"></script>
+<script>
+if(location.protocol==='file:')document.getElementById('dos').innerHTML='<p style="padding:20px">The emulator needs a web server. Open this page from the site, or serve this folder over http.</p>';
+else Dos(document.getElementById('dos'),{url:'play/converge.jsdos',pathPrefix:'play/emulators/',kiosk:true,noCloud:true,noNetworking:true,autoStart:true});
+</script>
+</body></html>

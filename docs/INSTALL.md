@@ -10,7 +10,7 @@ dependencies and no network requests.
 
 | Open | To play |
 |---|---|
-| `index.html` | Index page |
+| `index.html` | The DOS edition in a browser DOS emulator (needs http, not `file://`) |
 | `v2/index.html` | The physics lab |
 | `classic/index.html` | Charge! Phosphor |
 | `original/index.html` | The 1982 original in an emulator |

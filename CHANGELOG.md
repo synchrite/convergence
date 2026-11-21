@@ -506,3 +506,14 @@ real experience of adjusting convergence.
 - `index.html` is now a plain index page linking the physics lab, Charge!
   Phosphor, the 1982 original and the DOS download.
 - `docs/DESIGN.md` is marked shelved and kept as a record.
+
+## 2026-11-21: the DOS edition plays on the main page
+
+- `index.html` runs `dos/CONVERGE.EXE` in js-dos 8.5.4 (DOSBox compiled to
+  WebAssembly), hosted in `play/` so no outside server is used.
+- `tools/make_jsdos.py` packs the EXE and a DOSBox configuration into
+  `play/converge.jsdos`; `dos/build.sh` runs it after each build.
+- js-dos and DOSBox are GPL version 2; `play/README.md` gives credit and source.
+- Checked in headless Chromium over a local web server: the title screen
+  appears, keys reach the game, a job opens, and the page makes no requests to
+  other hosts. Sound was not checked. The page does not work from `file://`.
