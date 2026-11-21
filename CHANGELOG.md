@@ -371,11 +371,18 @@ Feedback: too often a stage could be won by changing only the squeeze ring.
   layouts that also cannot be fixed with one strip fewer than the level gives.
   For each stage it reports how many layouts it threw away because the rings
   were enough: between 0 and 25.
-- **Result.** On all 33 stages that have both parts and rings, rings alone do not
-  solve the stage (the solver could not, in two tries each). Seven of them were
-  also not solved with one strip fewer (3-7, 3-9, 3-10, 5-5, 5-8, 5-10, and
-  every level 1 stage, where one strip is all there is). On the rest, including
-  all of level 2, fewer strips than the level gives can still be enough.
+- **Result, checked by brute force.** On all 32 stages that have both parts and
+  rings, no setting of the squeeze ring alone wins the stage. On levels 1 and
+  2, no combination of every available ring wins without a strip.
+- **Result, by the solver.** On levels 3 to 5 the solver, given every ring and the
+  yoke but no strips, did not fix any of those stages. Some stages were also not
+  solved with one strip fewer than the level gives (3-7, 3-9, 3-10, 5-5, 5-8,
+  5-10, and all of level 1, where one strip is all there is). On the rest,
+  including all of level 2, fewer strips than the level gives can still be enough.
+- A first run of this search left stages 1-7 to 1-10 with layouts from before
+  the part strengths were finalised; one of them could still be won with the
+  squeeze ring. A direct test caught it and those stages were searched again.
+  Level 1 parts on ring stages are stronger (2 to 4) than on later levels.
 - These results come from a search that can fail to find a solution that
   exists, so "not solvable with fewer" means the solver did not manage it, not
   a proof.

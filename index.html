@@ -216,7 +216,7 @@ function genLevel(st,tForce){
     // bends every picture's beams alike, which a ring alone can undo; one further along acts on the pictures
     // unequally, and that is what a strip is for.
     const far=c.rings.length>0;
-    for(let i=0;i<c.n;i++)ions.push({x:far?2*Math.floor(r()*80)+70:2*Math.floor(r()*22)+34,y:2*Math.floor(r()*65)+14,q:(i%2===0?1:-1)*(far?1.4+r()*1.6:0.7+r()*0.9)});
+    for(let i=0;i<c.n;i++)ions.push({x:far?2*Math.floor(r()*80)+70:2*Math.floor(r()*22)+34,y:2*Math.floor(r()*65)+14,q:(i%2===0?1:-1)*(far?(c.L===1?2+r()*2:1.4+r()*1.6):0.7+r()*0.9)});   // level 1 has a single part, so it is stronger
     ions.forEach(sitePart);
     ro=Z();rod={sq:0,sh:0};for(const k of c.knock){ro[k]=(r()<.5?-1:1)*(2+Math.floor(r()*4));   // a ring that has been knocked out of place
       if(DIRS&&(k==='sq'||k==='sh'))rod[k]=c.kdir[k]!=null?c.kdir[k]:Math.floor(r()*4)}        // and turned

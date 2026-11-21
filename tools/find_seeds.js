@@ -18,7 +18,7 @@ const {chromium}=require('playwright'),fs=require('fs'),path=require('path');
   for(let st=from;st<=to;st++){
     const r=await p.evaluate(async([st,need])=>{
       const G=window.__gen,V=window.__cv,c=G.cfg(st);let ringsEnough=0,unsolved=0,fallback=null;
-      for(let t=0;t<60;t++){
+      for(let t=0;t<100;t++){
         G.genLevel(st,t);const e=V.evaluate();
         const broken=(e.wc>=c.conv*1.6||(c.pur!=null&&e.wp>=c.pur*1.3))&&e.wc<(c.L===1?9:c.L===2?16:c.L===3?40:30);
         if(!broken)continue;
@@ -36,10 +36,10 @@ const {chromium}=require('playwright'),fs=require('fs'),path=require('path');
         if(!fallback)fallback={...solved,needs:'at least one strip'};
         if(t>=20)break;
       }
-      return fallback?{...fallback,ringsEnough,unsolved}:null;
+      return fallback?{...fallback,ringsEnough,unsolved}:{none:true,ringsEnough,unsolved};
     },[st,need]);
-    console.log('stage',st,r?JSON.stringify(r):'NO SOLVABLE LAYOUT FOUND');
-    seeds.push(r?r.t:null);
+    console.log('stage',st,r&&!r.none?JSON.stringify(r):'NO LAYOUT FOUND '+JSON.stringify(r));
+    seeds.push(r&&!r.none?r.t:null);
   }
   for(let i=to+1;i<=50;i++)seeds.push(old[i]??null);
   await b.close();
