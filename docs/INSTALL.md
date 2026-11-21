@@ -11,7 +11,7 @@ dependencies and no network requests.
 | Open | To play |
 |---|---|
 | `index.html` | Charge! Convergence: the Convergence Bench (main page) |
-| `inside/index.html` | Inside the tube, the beam-path game |
+| `archive/inside-the-tube/index.html` | Inside the tube, the beam-path game |
 | `v2/index.html` | The physics lab |
 | `classic/index.html` | Charge! Phosphor |
 | `original/index.html` | The 1982 original in an emulator |

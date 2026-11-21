@@ -4,7 +4,7 @@
 The scene (a television repair shop) is composed from shapes at 1280x800, gone over
 with thousands of short brush strokes that follow the forms, then scaled to 320x200
 and reduced to 256 colours with error-diffusion dithering, the way painted art was
-scanned for VGA games. Run with --embed to write the result into inside/index.html.
+scanned for VGA games. Run with --embed to write the result into archive/inside-the-tube/index.html.
 """
 import base64, io, math, random, sys, pathlib
 import numpy as np
@@ -142,7 +142,7 @@ if __name__ == '__main__':
     buf = io.BytesIO(); pic.save(buf, 'PNG', optimize=True)
     print('art/title.png', len(buf.getvalue()), 'bytes, colours', len(pic.getcolors()))
     if '--embed' in sys.argv:
-        p = root / 'inside' / 'index.html'; s = p.read_text()
+        p = root / 'archive' / 'inside-the-tube' / 'index.html'; s = p.read_text()
         a = s.index('/*TITLE-ART*/'); b = s.index('/*END-TITLE-ART*/')
         s = s[:a] + "/*TITLE-ART*/'data:image/png;base64," + base64.b64encode(buf.getvalue()).decode() + "'" + s[b:]
-        p.write_text(s); print('embedded in inside/index.html')
+        p.write_text(s); print('embedded in archive/inside-the-tube/index.html')

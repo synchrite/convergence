@@ -480,3 +480,12 @@ real experience of adjusting convergence.
 - Checked in DOSBox-X (486, S3 SVGA) by script: every job shows its fault,
   passes after the cure and the correct diagnosis, and job 11 was completed by
   key presses alone. Not run on real hardware.
+
+## 2026-11-21: "inside the tube" shelved
+
+- The beam-path game moved to `archive/inside-the-tube/` and is no longer
+  linked from the main page or the README. Reason given by the owner: too
+  punishing and not educational enough.
+- `archive/README.md` lists the parts worth reusing (title art, music, the
+  charges, the cross-section as an explainer) and why the game did not work.
+- The seed and title-art tools point at the archived file.
