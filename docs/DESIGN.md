@@ -36,6 +36,35 @@ none is cut.
 | One new idea at a time | Each idea is taught, practised, twisted, then tested | Does any stage introduce two new things? |
 | Short, clear wins | A stage is one to three minutes and its ending is unmistakable | Does a first-time player know the moment they have won? |
 
+## 1a. Decisions taken (2026-11-21)
+
+The owner accepted the proposals in section 12 with one overriding instruction:
+replicate the real experience of adjusting convergence.
+
+That instruction changes the main view. A technician does not see beam paths.
+They stand behind the set, watch the whole test pattern in a mirror, and turn
+ring tabs by hand. So:
+
+- The main game is the **Convergence Bench** (`bench/index.html`): the full
+  picture in the mirror, and a rear view of the neck with the three ring pairs,
+  the yoke and eight places for a strip on the glass.
+- The beam-path game (`index.html`) becomes **inside the tube**: the explanation
+  of why the beams part. It is chapter 1 material and an X-ray view, not the job.
+- The second direction is no longer a separate feature: the picture is two
+  dimensional, and every ring has direction and strength from the start.
+- "Level N has N strips" is dropped on the bench. Strips are the last resort,
+  as on a real set.
+- Help levels (apprentice, technician, master) replace the turning modes on the bench.
+
+Built so far on the bench: twelve authored jobs on the shown, practised,
+twisted, tested pattern; the diagnosis step on the twisted and tested jobs;
+three medals (diagnosis, economy against par, result); a hint on request; the
+job sheet; degauss, gun switches, three patterns and the lock. That is most of
+milestones 2 to 4 for chapters 2 to 5 in a first form. Not yet built:
+milestone 1 (split files, stages as data in their own file, automated checks),
+the shop, customers beyond one line, the notebook, colour-blind support, the
+daily set, and any play test.
+
 ## 2. Where the game is now
 
 Built and working in the browser edition: tutorial, 50 stages in five levels,

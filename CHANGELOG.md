@@ -400,3 +400,38 @@ Feedback: too often a stage could be won by changing only the squeeze ring.
   engagement features, interface rules, a technical plan, play-test and
   learning measures, a build order, and seven decisions for the owner.
 - No game code changed.
+
+## 2026-11-21: the Convergence Bench
+
+The owner accepted the design specification with one instruction: replicate the
+real experience of adjusting convergence.
+
+- **New main game, `bench/index.html`.** You stand behind the set. On the left is
+  a mirror showing the whole test pattern, reversed. On the right is the neck
+  of the tube from behind: three ring pairs, the yoke, and eight places on the
+  glass for a strip.
+- **Ring tabs under your hands.** Each ring pair has two tabs. Drag a tab round
+  the neck, or drag the band to turn both. Turning the pair changes the
+  direction it moves the beams; spreading the tabs changes how hard; tabs
+  together cancel. Purity moves all three beams, 4-pole moves red and blue
+  opposite ways, 6-pole moves them together, green stays put.
+- **The whole picture responds.** A crosshatch, dots or a red field is drawn for
+  each gun with its own landing error at every point, so the lines slide over
+  each other as the tabs move. Static error is the same everywhere; yoke tilt
+  splits opposite edges in opposite directions; a strip acts on one corner.
+- **Left and right are as they really are.** The mirror reverses the picture, and
+  the rear view is laid out to match what you would see from behind.
+- **Twelve authored jobs** in place of generated stages, each one idea: shown,
+  practised, twisted or tested. Tested and twisted jobs start with a diagnosis:
+  you name the fault before the controls unlock.
+- **Three medals a job:** diagnosis right first time, economy (moves against a par,
+  no hints), result (finished without breaking the seal). No timer.
+- **Help levels:** apprentice shows which way each ring is out and the
+  measurements; technician shows measurements only; master shows the picture only.
+- A hint is given only when asked for, and costs the economy medal.
+- Checked: all twelve jobs are rejected as they arrive and pass when the cure is
+  applied; job 1 was done by dragging the two tabs with the pointer; the
+  diagnosis card rejects a wrong answer and accepts the right one; keyboard
+  ring control works.
+- The beam-path game stays at `index.html` as "inside the tube", with a link to
+  the bench at the top.
