@@ -32,10 +32,19 @@ Level 5 brings in the second direction through the rings; see below.
   change every part of the screen by the same amount. They are set on the
   centre of the screen. What is left at the edges is dynamic error, corrected
   near the yoke and funnel: yoke tilt, wedges, and magnetic strips.
-- **A strip only affects what passes it.** A strip near the screen changes the
-  pictures whose beams go through its field and leaves the rest.
+- **Strips go on the glass.** A convergence strip is a small magnet stuck to the
+  outside of the funnel, between the yoke and the screen. It is slid along the
+  glass while the picture is watched, flipped to change which pole faces the
+  tube, trimmed shorter to weaken it, and left stuck down. The game's strips
+  work the same way, on the top or bottom glass of the slice.
+- **A strip acts most on the nearest beam.** Its pull dies away quickly with
+  distance. On the top glass it moves red most, on the bottom glass blue. Near
+  the yoke, where the glass is close to the beams, it does a great deal; near
+  the screen very little.
 - **Lever arm.** A bend applied early has more distance to act over, so it
   moves the landing point further.
+- **Measure first.** The gap between the outer beams is read as a number, and
+  the effect of a strip at each place can be tabulated before it is stuck down.
 - **Why convergence errors exist.** A field that is the same across all three
   beams moves them together (a purity error). Only a field that is stronger on
   one side separates them. That is why the game's fault parts sit near the neck
@@ -104,12 +113,12 @@ Not modelled yet: warm-up drift, and a second playfield for the side view.
 
 ## What is simplified
 
-- **Strips in the vacuum.** Real strips are stuck to the outside of the glass,
-  under the yoke. Here you place them over the beams, as if looking through
-  the glass at the spot the strip acts on.
-- **Strip fields.** A strip is an ideal zone: a uniform field (mover) or a field
-  that changes sign across its width (squeezer). A real strip has a messier
-  field and affects neighbouring areas.
+- **Strip fields.** A strip is treated as a single pole on the glass whose pull
+  falls off with the square of distance. A real strip is a short bar magnet
+  with a messier field, and where it sits around the neck matters as well as
+  how far along the funnel.
+- **Strip turning.** Turning a strip is modelled only as losing strength (to
+  seven tenths at 45 degrees, four tenths at 90).
 - **Ring interaction.** Real rings interact, and the work is repeated several
   times. The game's rings are independent.
 - **Deflection.** There is no scanning. Each picture is one fixed beam direction.

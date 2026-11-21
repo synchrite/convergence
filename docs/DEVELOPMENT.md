@@ -39,8 +39,9 @@ libraries. Open the file to run it.
   `tools/find_seeds.js` (run it again after any change to the physics or to
   `cfg`). Fault parts are placed by `sitePart` on or outside the glass. The
   title picture is made and embedded by `tools/paint_title.py --embed`.
-  Strips: `placeAt` snaps to the grid (and, in easy mode, to the picture's beam
-  line); `sim` samples each step five times inside strips; `meas` and `effectOf`
+  Strips: a strip is `{x, side, y, pol, len, rot}` on the top (side -1) or bottom
+  glass; `placeAt` snaps it to the grid on the glass and reports whether a part
+  blocks the spot; in `sim` it is a point source like the parts; `meas` and `effectOf`
   give the numbers shown to the player; `drawRuler` tabulates the strip in hand
   along the tube. Any change to `sim` means running `tools/find_seeds.js` again
   for all three modes (about four minutes for each half of a mode).

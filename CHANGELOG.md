@@ -313,3 +313,32 @@ before the fix: a gap of 5.2 changed by about 0.5, jumping every few pixels.
 each half bar, and more bite. An "intrigue" melody (E minor with its leading
 tone, sparse, with echoes) plays for four bars in every sixteen. The level was
 lowered to stop clipping (rendered peak 0.92). The DOS edition's music is unchanged.
+
+## 2026-11-21: strips are magnets on the glass
+
+Feedback: make placing convergence strips more fun and more realistic.
+
+- **Realistic.** A strip is now what it is on a real set: a small magnet stuck to
+  the outside of the funnel glass, between the yoke and the screen. It can go on
+  the top glass or the bottom glass. It no longer floats in the vacuum, and the
+  two abstract kinds (squeezer and mover) are gone. Its field reaches the beams
+  from the glass and falls off with distance squared, like the fault parts'.
+- **What you do with it.** Slide it along the glass under the pointer; press it
+  on (click); flip it over, so the face toward the tube pulls or pushes (P);
+  trim it to one of three lengths, shorter being weaker (1, 2, 3 or the wheel);
+  drag to slide it, including across to the other glass; click to peel it off.
+  A strip cannot go where a part is already fixed to the glass.
+- **Fun.** Each action has its own sound (a thud when pressed on, a tick for each
+  step it slides, a snip when trimmed, a whoosh when flipped, a rip when peeled)
+  and a puff of dust. The strip's field is drawn pulsing toward it or away from
+  it. Arrows on the beams show how hard it pulls each one.
+- **Still by measurement.** The ruler across the top now tabulates the strip in
+  hand along the top or bottom glass, whichever the pointer is nearer.
+- **Modes.** Easy: strips lie flat. Medium: a quarter turn, which leaves four
+  tenths of the strength for finer steps. Hard: 45 degrees as well (seven tenths).
+- **Fault parts** now have strengths that are not whole numbers (0.7 to 1.6), so a
+  strip cannot simply copy the part it is cancelling.
+- Advice reads in terms of the strip: "gap too wide: push red down, or blue up".
+- Purity is now a matter for the purity ring and the yoke only, as on a real set.
+- All 50 stages were re-checked in all three modes with the new strips. The
+  tutorial and stage 1-1 to 1-3 texts teach the new handling.
