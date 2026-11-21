@@ -72,7 +72,7 @@ Switches: `/BANK`, `/NOSOUND`, `/NOSB`, `/NOADLIB`. Any other argument prints he
 
 ### Writing to disk: getting the file onto the PC
 
-`CONVERGE.EXE` is about 140 KB, so it fits on any floppy.
+`CONVERGE.EXE` is about 176 KB, so it fits on any floppy.
 
 **Floppy disk, from Windows.** Format a 1.44 MB (or 720 KB) disk as FAT and copy
 the file to it. A USB floppy drive works.

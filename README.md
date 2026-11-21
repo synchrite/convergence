@@ -13,7 +13,7 @@ original has its own repository and site; nothing here replaces it.
 
 | Path | What it is | Runs on |
 |---|---|---|
-| `dos/CONVERGE.EXE` | **DOS edition.** A CRT service-bench game plus a test-pattern generator for a real monitor | DOS, 486 class PC, SVGA, AdLib / Sound Blaster |
+| `dos/CONVERGE.EXE` | **DOS edition.** The Convergence Bench (the same twelve jobs as the main page), a wider monitor service game, and a test-pattern generator for a real monitor | DOS, 486 class PC, SVGA, AdLib / Sound Blaster |
 | `index.html` | **Convergence Bench (main page).** The real experience: the whole test pattern in a mirror, ring tabs, yoke and strips under your hands; twelve authored jobs with diagnosis and medals | Any modern browser |
 | `inside/index.html` | **Inside the tube.** The beam-path game: a slice through the tube showing why the beams part and what a ring or a strip does to them | Any modern browser |
 | `v2/index.html` | Physics lab: a beam steered by real electric and magnetic deflection, with lessons | Browser |
