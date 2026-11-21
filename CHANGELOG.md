@@ -489,3 +489,8 @@ real experience of adjusting convergence.
 - `archive/README.md` lists the parts worth reusing (title art, music, the
   charges, the cross-section as an explainer) and why the game did not work.
 - The seed and title-art tools point at the archived file.
+
+## 2026-11-21: rule recorded
+
+- `docs/DEVELOPMENT.md` states that the `synchrite/charge` repository is frozen:
+  its link was given to the original author, so nothing is pushed there.

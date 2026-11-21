@@ -4,6 +4,13 @@ Charge! Convergence is inspired by the original *Charge!* by C. Anthony Ray
 (BYTE, December 1982). These notes explain how each part works, how to build
 and test it, and what is still open.
 
+## Rule: the `synchrite/charge` repository is frozen
+
+`synchrite/charge` holds the 1982 original and its link has been given to the
+game's author. Do not push to it, edit it or redeploy it (owner's instruction,
+2026-11-21). All work goes to `synchrite/convergence`. The copy of the original
+in `original/` here may be worked on without affecting that link.
+
 ## 1. Lineage
 
 | Step | Kept from the step before | New |
