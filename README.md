@@ -28,6 +28,7 @@ original has its own repository and site; nothing here replaces it.
 | [`CHANGELOG.md`](CHANGELOG.md) | Every change, in order |
 | [`docs/REAL-CRT.md`](docs/REAL-CRT.md) | How the flat game maps to a real, three-dimensional tube |
 | [`ROADMAP.md`](ROADMAP.md) | Where the project is going: CRT repair, electronics, fault tracing |
+| [`docs/DESIGN.md`](docs/DESIGN.md) | Design specification: goals, core loop, curriculum, engagement, build order, open decisions |
 | [`dos/README.md`](dos/README.md) | DOS edition: features, switches, what was tested |
 | [`original/README.md`](original/README.md) | The 1982 listing: transcription notes and credit |
 

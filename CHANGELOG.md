@@ -390,3 +390,13 @@ Feedback: too often a stage could be won by changing only the squeeze ring.
   unchanged: they have no parts and are meant to be done with the adjustment alone.
 - Medium and hard use the same layouts as easy. Anything solvable with flat
   strips is solvable when turning is also allowed.
+
+## 2026-11-21: design specification
+
+- Added `docs/DESIGN.md`: what the game is for and what a player should learn,
+  an account of what is wrong with the current build, a five-step core loop
+  with a diagnosis step, a keep, change and cut list, a six-chapter curriculum
+  on a shown, practised, twisted, tested pattern, help-based difficulty,
+  engagement features, interface rules, a technical plan, play-test and
+  learning measures, a build order, and seven decisions for the owner.
+- No game code changed.
