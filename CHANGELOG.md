@@ -220,3 +220,30 @@ being converged, seen from the side or rear with the front in a mirror.
   not yet have stages built to reward turning.
 - A Mode button switches mode and restarts the stage; the choice is remembered.
   Stars are kept separately for each mode. The Rotate button is disabled in easy.
+
+## 2026-11-21: level 4, the real alignment procedure
+
+Priority set by the owner: real CRT repair technique first.
+
+- **Level 4** (ten stages) is a real alignment in the real order. A job list at
+  the top ticks off: 1 degauss, 2 purity, 3 centre, 4 edges.
+- **Degauss.** A magnetised shadow mask puts patches on the red field that no
+  ring cures. D (or the Degauss button) clears it. Stage 4-2 teaches it.
+- **Test patterns in the mirror.** M (or the Pattern button, or a click on the
+  mirror's heading) switches between dots, for convergence, and a red field,
+  for purity. Each fault shows only on its own pattern.
+- **The yoke moves.** Sliding it along the neck changes purity at the edges and
+  leaves the centre alone (stage 4-3). Tilting it makes red and blue cross
+  opposite ways at the two edges (stage 4-4). The drawn yoke slides and tilts.
+- **Order matters.** Sliding the yoke also shifts edge convergence a little, so
+  purity is done before convergence, as on a real set.
+- **Advice follows the procedure.** The bottom line now reasons like a
+  technician: degauss first; centre tinted, purity ring; centre pure and edges
+  tinted, slide the yoke; fix the centre picture with the rings first; centre
+  good and edges split opposite ways, tilt the yoke; strips last.
+- Stages 4-1 to 4-6 teach one step each and need no strips; this was checked by
+  applying the procedure with no strips placed. 4-7 to 4-10 are whole jobs with
+  one or two magnetised parts as well. All ten were checked with the solver in
+  each mode.
+- `docs/REAL-CRT.md` has a table setting each step on a real set beside its
+  stage in the game.

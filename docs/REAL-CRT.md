@@ -48,6 +48,28 @@ picture; see the roadmap.
   dynamic convergence.
 - **A magnet does not change the beam's speed**, only its direction.
 
+## Level 4: the real procedure
+
+Level 4 is an alignment done in the order a technician does it. The job list at
+the top of the screen ticks off as each part comes right.
+
+| Step | On a real set | In the game |
+|---|---|---|
+| 1. Degauss | A magnetised shadow mask spoils purity in patches that no adjustment cures. Degauss before anything else | Stage 4-2. Press D. Until then the red field has patches |
+| 2. Purity, centre | On a red field, turn the purity rings until the centre is pure red | Stage 4-1. Red field in the mirror, purity ring |
+| 3. Purity, edges | Slide the yoke along the neck until the whole field is red, then clamp it | Stage 4-3. Yoke slide. It acts in proportion to distance from the centre |
+| 4. Static convergence | On dots or a crosshatch, four-pole rings bring red and blue together, six-pole rings lay them on green, at the centre | Squeeze and shift rings, centre picture |
+| 5. Dynamic convergence | Tilt the yoke until the edges converge, and wedge it | Stage 4-4. Yoke tilt. Red and blue cross opposite ways at the two edges, which is how the fault is recognised |
+| 6. What is left | Magnetic strips on the glass | Strips, last |
+| 7. Repeat | Purity and convergence disturb each other | Sliding the yoke changes the edges' convergence a little, so purity is done first |
+
+Each fault shows only on the pattern a technician would use: purity on the red
+field, convergence on the dots. The advice line at the bottom follows the same
+reasoning: centre before edges, rings before yoke before strips.
+
+Not modelled yet: clamping and wedging the yoke, sealing the rings with paint,
+warm-up drift, and the second (vertical) direction.
+
 ## What is simplified
 
 - **Strips in the vacuum.** Real strips are stuck to the outside of the glass,
