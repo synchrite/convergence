@@ -1,12 +1,14 @@
 // Find, for each of the 30 stages, a layout that starts visibly broken and that the solver can fix
 // with that stage's strips and rings. Writes the seed table into index.html between the SEEDS markers.
-// Run: node tools/find_seeds.js   (needs Playwright with Chromium)
+// Run: node tools/find_seeds.js easy|medium|hard   (needs Playwright with Chromium)
+// Each mode holds the solver to that mode's strip angles, so no stage needs a turn the mode does not allow.
 const {chromium}=require('playwright'),fs=require('fs'),path=require('path');
 (async()=>{
   const file=path.resolve(__dirname,'..','index.html');
   const b=await chromium.launch();const p=await b.newPage();
   p.on('pageerror',e=>console.log('PAGE ERROR',e.message));
   await p.goto('file://'+file+'#level-1');await p.waitForTimeout(300);
+  const mode=process.argv[2]||'easy';await p.evaluate(m=>window.__gen.setMode(m),mode);console.log('mode',mode);
   const seeds=[null];
   for(let st=1;st<=30;st++){
     const r=await p.evaluate(async st=>{
@@ -25,6 +27,7 @@ const {chromium}=require('playwright'),fs=require('fs'),path=require('path');
   }
   await b.close();
   let s=fs.readFileSync(file,'utf8');const a=s.indexOf('/*SEEDS*/'),z=s.indexOf('/*END-SEEDS*/');
-  s=s.slice(0,a)+'/*SEEDS*/'+JSON.stringify(seeds)+s.slice(z);fs.writeFileSync(file,s);
+  const all=JSON.parse(s.slice(a+9,z));all[mode]=seeds;
+  s=s.slice(0,a)+'/*SEEDS*/'+JSON.stringify(all)+s.slice(z);fs.writeFileSync(file,s);
   console.log('seeds written:',JSON.stringify(seeds));
 })();

@@ -17,7 +17,7 @@ a{color:var(--acc)}
 .mon.crt::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(to bottom,rgba(0,0,0,.28) 0 1px,rgba(0,0,0,0) 1px 3px),radial-gradient(ellipse at center,rgba(0,0,0,0) 60%,rgba(0,0,0,.45) 100%)}
 .bar{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
 button{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer}
-button:hover{border-color:var(--acc)}button:focus-visible,canvas:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+button:hover{border-color:var(--acc)}button:disabled{opacity:.4;cursor:default}button:focus-visible,canvas:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 button[aria-pressed=true]{background:#14301f;border-color:var(--acc)}
 #msg{min-height:1.5em;color:var(--fg)}
 .keys{font-size:13px}
@@ -25,7 +25,7 @@ button[aria-pressed=true]{background:#14301f;border-color:var(--acc)}
 </style></head><body>
 <main>
 <h1>Charge! Convergence</h1>
-<p>Three electron beams, red, green and blue, leave the gun and have to meet at one point on the screen. Stray charges bend each beam by a different amount. You are a technician standing behind a television with its back off. You cannot see the screen from here, so a mirror stands in front of the set, on the right. The picture in it has come apart into red, green and blue ghosts. Stick magnetic strips onto the tube until every character in the mirror snaps back into one sharp white picture. A short tutorial opens the first time you play, and the Tutorial button brings it back. There are three levels of ten stages: level 1 gives you one strip, level 2 two, level 3 three, and the neck rings arrive along the way.</p>
+<p>Three electron beams, red, green and blue, leave the gun and have to meet at one point on the screen. Stray charges bend each beam by a different amount. You are a technician standing behind a television with its back off. You cannot see the screen from here, so a mirror stands in front of the set, on the right. The picture in it has come apart into red, green and blue ghosts. Stick magnetic strips onto the tube until every character in the mirror snaps back into one sharp white picture. A short tutorial opens the first time you play, and the Tutorial button brings it back. There are three levels of ten stages: level 1 gives you one strip, level 2 two, level 3 three, and the neck rings arrive along the way. Three modes: in Easy a strip always stands upright and no stage needs it turned; in Medium it can be given a quarter turn; in Hard it turns through four angles.</p>
 <div class="mon crt" id="mon"><canvas id="c" width="320" height="200" tabindex="0" aria-label="Convergence puzzle, 320 by 200 VGA style display"></canvas><canvas id="title" width="320" height="200" aria-label="Title screen: a painted television repair shop. Click or press a key to start."></canvas></div>
 <div class="bar" role="toolbar" aria-label="Strip tools">
   <button id="bRot" title="Rotate the strip (R, or right click)">Rotate</button>
@@ -35,7 +35,8 @@ button[aria-pressed=true]{background:#14301f;border-color:var(--acc)}
   <button id="bUndo" title="Take back the last strip (U)">Undo</button>
   <button id="bClear" title="Remove all strips (C)">Clear</button>
   <button id="bAuto" title="Search for strip placements (A). Costs the stars.">Auto-place</button>
-  <button id="bTut" title="How the beams behave, in five steps">Tutorial</button>
+  <button id="bMode" title="Easy: strips stay upright. Medium: quarter turns. Hard: four angles.">Mode: easy</button>
+  <button id="bTut" title="How the beams behave, in six steps">Tutorial</button>
   <button id="bPrev" title="Previous stage">&lt; Stage</button>
   <button id="bNext" title="Next stage (N)">Stage &gt;</button>
   <button id="bCrt" aria-pressed="true" title="Scanlines and vignette (F)">CRT filter</button>
@@ -112,8 +113,13 @@ function cfg(st){
 }
 const stageName=st=>{const c=cfg(st);return c.L+'-'+c.S};
 /* Seeds checked with the solver: each stage can be solved with its strips and rings. Filled by tools/find_seeds.js. */
-const SEEDS=/*SEEDS*/[null,2,1,1,1,1,0,6,0,3,4,7,7,0,1,1,0,1,0,0,0,0,0,1,0,0,0,0,0,1,1]/*END-SEEDS*/;
+const SEEDS=/*SEEDS*/{"easy":[null,2,1,1,1,1,0,6,0,3,4,7,7,0,1,1,0,1,0,0,0,0,0,1,0,0,0,0,0,1,1],"medium":[null,2,1,1,1,1,0,6,0,3,4,7,7,0,1,1,0,1,0,0,0,0,0,1,0,0,0,0,0,1,1],"hard":[null,2,1,1,1,1,0,6,0,3,4,7,7,0,1,1,0,1,0,0,0,0,0,1,0,0,0,0,0,1,1]}/*END-SEEDS*/;
 const RINGN={sq:'SQUEEZE',sh:'SHIFT',pu:'PURITY'},KR=0.006,CG2=14;
+/* Modes. Easy: a strip always stands upright across the beams and no stage needs anything else.
+   Medium: a strip can also be laid along the beams (a quarter turn). Hard: all four angles.
+   Each mode has its own checked layouts, found with the solver held to that mode's angles. */
+const ROTS={easy:[2],medium:[0,2],hard:[0,1,2,3]},MODES=['easy','medium','hard'];
+let mode='easy';try{const m=localStorage.getItem('conv-mode');if(ROTS[m])mode=m}catch(e){}
 let RINGS=[],rv={sq:0,sh:0,pu:0},ro={sq:0,sh:0,pu:0},ringSel='sq';
 let ions=[],strips=[],seed=1,level=1,tool={rot:2,pol:1,kind:'Q',str:2},cursor=null,passed=false,usedAuto=false,msg='';
 const mulberry=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
@@ -153,7 +159,8 @@ function genLevel(st,tForce){
   rv={sq:0,sh:0,pu:0};ro={sq:0,sh:0,pu:0};RINGS=[];
   if(st===0){genLevel(1);tutIon=ions.map(o=>({...o}));AIMS=[80];CONV_TOL=3;PUR_TOL=null;BUDGET=2;usedAuto=false;passed=false;active=0;pinned=false;tutSet(0);return}
   const c=cfg(st);AIMS=c.aims;CONV_TOL=c.conv;PUR_TOL=c.pur;BUDGET=c.budget;RINGS=c.rings;ringSel=c.knock[0]||c.rings[0]||'sq';strips=[];
-  const t0=tForce!=null?tForce:SEEDS[st]!=null?SEEDS[st]:0,t1=(tForce!=null||SEEDS[st]!=null)?t0+1:60;
+  const sd=(SEEDS[mode]||[])[st],t0=tForce!=null?tForce:sd!=null?sd:0,t1=(tForce!=null||sd!=null)?t0+1:60;
+  if(!ROTS[mode].includes(tool.rot))tool.rot=2;
   for(let t=t0;t<t1;t++){
     const r=mulberry(st*977+13+t*7919);ions=[];
     // placement after lines 2080 to 2110 of the 1982 listing (odd x, even y, signs alternate, + first);
@@ -216,7 +223,7 @@ function diagnose(r){
 let searching=false;
 async function autoPlace(K,live){
   searching=true;
-  const rnd=Math.random,P=()=>({x:20+rnd()*(FW-40),y:8+rnd()*(FH-16),a:Math.floor(rnd()*4)*Math.PI/4,pol:rnd()<.5?-1:1,kind:rnd()<.5?'D':'Q',str:1+Math.floor(rnd()*3)});
+  const rnd=Math.random,RA=()=>ROTS[mode][Math.floor(rnd()*ROTS[mode].length)]*Math.PI/4,P=()=>({x:20+rnd()*(FW-40),y:8+rnd()*(FH-16),a:RA(),pol:rnd()<.5?-1:1,kind:rnd()<.5?'D':'Q',str:1+Math.floor(rnd()*3)});
   let cur=Array.from({length:K},P),curR={...rv};strips=cur;let c=evaluate().cost,best=cur.map(s=>({...s})),bestR={...rv},bc=c;
   const iters=9000;
   for(let it=0;it<iters+3000&&bc>0.3;it++){
@@ -225,7 +232,7 @@ async function autoPlace(K,live){
     if(RINGS.length&&(K===0||rnd()<.15)){const k=RINGS[Math.floor(rnd()*RINGS.length)];candR[k]=Math.max(-6,Math.min(6,candR[k]+(rnd()<.5?-1:1)))}
     else if(K>0){const i=Math.floor(rnd()*K),s=cand[i];
       if(m<.6){s.x=Math.max(14,Math.min(FW-14,s.x+(rnd()-.5)*j));s.y=Math.max(8,Math.min(FH-8,s.y+(rnd()-.5)*j))}
-      else if(m<.7&&!refine)s.a=Math.floor(rnd()*4)*Math.PI/4;
+      else if(m<.7&&!refine)s.a=RA();
       else if(m<.78&&!refine)s.pol*=-1;
       else if(m<.86&&!refine)s.kind=s.kind==='D'?'Q':'D';
       else if(m<.96)s.str=1+Math.floor(rnd()*3);
@@ -510,7 +517,7 @@ function ringAt(p){   // field coordinates -> {k, d} for a click on < or >, or {
 function ringTurn(k,d){ringSel=k;const v=Math.max(-6,Math.min(6,rv[k]+d));if(v!==rv[k]){rv[k]=v;sfx.turn()}}
 function drawHud(ev,real,ghostOk){
   rect(0,0,W,16,rgb(10,16,46));
-  text('CONVERGE',6,4,rgb(255,255,255),1);
+  text(level?mode.toUpperCase():'CONVERGE',6,4,rgb(255,255,255),1);
   text(level?'LEVEL '+stageName(level):'TUTORIAL',66,4,COL.ui);
   text('STRIPS '+strips.length+'/'+budget(),132,4,strips.length>=budget()?COL.warn:COL.ui);
   // how far apart the beams land: the bar must shrink inside the green mark
@@ -519,7 +526,7 @@ function drawHud(ev,real,ghostOk){
    rect(x0,5,76,6,rgb(20,26,60));rect(x0,5,Math.max(1,L),6,c);for(let j=3;j<13;j++)px(x0+tol,j,rgb(60,255,110))}
   rect(0,182,W,18,rgb(10,16,46));
   const names=['0','45','90','135'];
-  text('STRIP: '+(tool.kind==='D'?'MOVER':'SQUEEZER')+'  '+(tool.pol>0?'+':'-')+'  STR '+tool.str+'  ROT '+names[tool.rot],6,184,COL.ui);
+  text('STRIP: '+(tool.kind==='D'?'MOVER':'SQUEEZER')+'  '+(tool.pol>0?'+':'-')+'  STR '+tool.str+(mode==='easy'||level===0?'':'  ROT '+names[tool.rot]),6,184,COL.ui);
   const c=level?cfg(level):null;
   const m=level===0?'TUTORIAL: HOW THE BEAMS BEHAVE':passed?(c.S===10&&level<30?'LEVEL '+c.L+' DONE! ENTER FOR LEVEL '+(c.L+1):'FIXED! ENTER FOR THE NEXT STAGE')
     :ghostOk?'THIS SPOT WORKS: CLICK TO STICK IT':diagnose(ev.rows[Math.min(active,ev.rows.length-1)]);
@@ -595,7 +602,19 @@ cv.addEventListener('contextmenu',e=>{e.preventDefault();rotate()});
 cv.addEventListener('wheel',e=>{const rg=cursor&&ringAt(cursor);if(rg&&rg.k){ringTurn(rg.k,e.deltaY<0?1:-1);e.preventDefault();return}const h=under();const cur=h>=0?strips[h].str:tool.str,n=Math.max(1,Math.min(3,cur+(e.deltaY<0?1:-1)));if(n!==cur)str(n);e.preventDefault()},{passive:false});
 const say=t=>{msg=t;$('msg').textContent=t};
 const under=()=>cursor?hit(cursor):-1;   // tool keys act on the strip under the cursor, if any
-function rotate(){sfx.turn();const h=under();if(h>=0){const s=strips[h];s.rot=((s.rot||0)+1)%4;s.a=s.rot*Math.PI/4;tool.rot=s.rot}else tool.rot=(tool.rot+1)%4;sync()}
+function rotate(){
+  const R=level===0?[2]:ROTS[mode];
+  if(R.length===1){say('Easy mode: a strip always stands upright across the beams. Slide it and flip it (P) instead. Medium mode lets you turn it.');return}
+  sfx.turn();const nx=r=>R[(R.indexOf(r)+1)%R.length],h=under();
+  if(h>=0){const s=strips[h];s.rot=nx(R.includes(s.rot)?s.rot:R[0]);s.a=s.rot*Math.PI/4;tool.rot=s.rot}else tool.rot=nx(R.includes(tool.rot)?tool.rot:R[0]);
+  sync();
+}
+function setMode(m){
+  if(!ROTS[m])return;mode=m;try{localStorage.setItem('conv-mode',m)}catch(e){}
+  if(!ROTS[mode].includes(tool.rot))tool.rot=2;
+  sync();if(level>0)go(level);
+  say('Mode: '+m+'. '+(m==='easy'?'Strips stay upright; no stage needs turning.':m==='medium'?'Strips can be turned a quarter turn (R); no stage needs more.':'Strips turn through four angles (R).')+(level>0?' '+intro():''));
+}
 function pol(){sfx.turn();const h=under();if(h>=0){strips[h].pol*=-1;tool.pol=strips[h].pol}else tool.pol*=-1;sync()}
 function kind(){sfx.turn();const h=under();if(h>=0){strips[h].kind=strips[h].kind==='D'?'Q':'D';tool.kind=strips[h].kind}else tool.kind=tool.kind==='D'?'Q':'D';sync()}
 function str(n){sfx.turn();const h=under();if(h>=0){strips[h].str=n||(strips[h].str%3)+1;tool.str=strips[h].str}else tool.str=n||(tool.str%3)+1;sync()}
@@ -610,7 +629,7 @@ async function auto(){
 }
 function go(L){
   level=Math.max(0,L);try{location.hash=level?'level-'+level:'tutorial'}catch(e){}
-  frame.reported=false;wasOk=[];parts=[];genLevel(level);if(level)say(intro());
+  frame.reported=false;wasOk=[];parts=[];genLevel(level);sync();if(level)say(intro());
 }
 function intro(){
   const c=cfg(level),t={
@@ -625,15 +644,16 @@ function intro(){
    '3-1':'Level 3: three strips. New: the PURITY RING moves all three beams together. The picture must now land on the white mark as well as being white.'};
   return 'Level '+c.L+', stage '+c.S+' of 10. '+(t[stageName(level)]||(c.n+' magnetised part'+(c.n===1?'':'s')+', '+c.aims.length+' picture'+(c.aims.length===1?'':'s')+', '+c.budget+' strip'+(c.budget===1?'':'s')+(c.rings.length?', rings: '+c.rings.map(k=>RINGN[k].toLowerCase()).join(', '):'')+'.'));
 }
-function saveStars(n){if(!level)return;try{const b=JSON.parse(localStorage.getItem('conv-stars')||'{}');if(!(b[level]>=n)){b[level]=n;localStorage.setItem('conv-stars',JSON.stringify(b))}}catch(e){}}
+function saveStars(n){if(!level)return;const key='conv-stars-'+mode;try{const b=JSON.parse(localStorage.getItem(key)||'{}');if(!(b[level]>=n)){b[level]=n;localStorage.setItem(key,JSON.stringify(b))}}catch(e){}}
 function sync(){
   $('bPol').textContent='Polarity '+(tool.pol>0?'+':'-');
   $('bKind').textContent='Strip: '+(tool.kind==='D'?'mover':'squeezer');
   $('bStr').textContent='Strength '+tool.str;
+  $('bMode').textContent='Mode: '+mode;$('bRot').disabled=mode==='easy'||level===0;
 }
 $('bRot').onclick=rotate;$('bPol').onclick=pol;$('bKind').onclick=kind;$('bStr').onclick=()=>str();
 $('bUndo').onclick=undo;$('bClear').onclick=clear;$('bAuto').onclick=auto;
-$('bNext').onclick=()=>go(level+1);$('bPrev').onclick=()=>go(level-1);$('bTut').onclick=()=>go(0);
+$('bMode').onclick=()=>setMode(MODES[(MODES.indexOf(mode)+1)%3]);$('bNext').onclick=()=>go(level+1);$('bPrev').onclick=()=>go(level-1);$('bTut').onclick=()=>go(0);
 $('bCrt').onclick=()=>{const m=$('mon');m.classList.toggle('crt');$('bCrt').setAttribute('aria-pressed',m.classList.contains('crt'))};
 $('bSnd').onclick=()=>{audio();soundOn=!soundOn;$('bSnd').setAttribute('aria-pressed',soundOn);if(soundOn)sfx.turn()};
 $('bMus').onclick=()=>{musicOn=!musicOn;$('bMus').setAttribute('aria-pressed',musicOn);if(musicOn){audio();musicStart()}else musicStop()};
@@ -691,7 +711,7 @@ function titleOff(){if(!titleOn)return;titleOn=false;tcv.style.display='none';au
 titleImg.src=TITLE_SRC;
 if(titleOn){tcv.addEventListener('pointerdown',e=>{e.preventDefault();titleOff()});requestAnimationFrame(titleFrame)}else tcv.style.display='none';
 window.__mus={mus,mStep,mInit,get ctx(){return actx},set ctx(v){actx=v;mGain=null},V,STEP};
-window.__gen={cfg,genLevel:(st,t)=>{level=st;genLevel(st,t)},get rv(){return rv},get ro(){return ro},get RINGS(){return RINGS},SEEDS,stageName};
+window.__gen={setMode:m=>{mode=m},get mode(){return mode},cfg,genLevel:(st,t)=>{level=st;genLevel(st,t)},get rv(){return rv},get ro(){return ro},get RINGS(){return RINGS},SEEDS,stageName};
 window.__cv={get ions(){return ions},get strips(){return strips},evaluate,autoPlace,genLevel,go,budget,set strips(v){strips=v},get level(){return level},get passed(){return passed}};
 })();
 </script>

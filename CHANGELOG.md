@@ -205,3 +205,18 @@ being converged, seen from the side or rear with the front in a mirror.
 - **Strips renamed** squeezer and mover; the technical names are in the notes.
 - Added `docs/REAL-CRT.md` (how the flat game maps to a real tube, what is true
   and what is simplified) and `ROADMAP.md` (the repair-teaching direction).
+
+## 2026-11-21: easy, medium and hard modes
+
+- **Easy** (the default): a strip always stands upright across the beams and
+  cannot be turned. The fundamentals are taught this way: slide it, flip it.
+- **Medium**: a strip can also be given a quarter turn, to lie along the beams.
+- **Hard**: four angles, as before.
+- No stage needs a turn its mode does not allow. `tools/find_seeds.js` takes the
+  mode as an argument and holds the solver to that mode's angles; all 30 stages
+  pass in all three modes.
+- As it turned out, the same 30 layouts pass in every mode, so for now the modes
+  share layouts and differ only in what the player may do. Medium and hard do
+  not yet have stages built to reward turning.
+- A Mode button switches mode and restarts the stage; the choice is remembered.
+  Stars are kept separately for each mode. The Rotate button is disabled in easy.
