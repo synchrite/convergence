@@ -16,11 +16,10 @@ through 90 degrees. That is why each real ring magnet has two adjustments:
 
 | Real adjustment | What it does | In the game |
 |---|---|---|
-| Turn both tabs of a ring together | Chooses the **direction** of the shift | Fixed: the slice has one direction |
+| Turn both tabs of a ring together | Chooses the **direction** of the shift | Level 5: SQUEEZE DIR and SHIFT DIR. Fixed along the gun row before that |
 | Spread the two tabs apart | Chooses the **strength** | The ring value, -6 to +6 |
 
-A second view (the vertical slice) with the same rules would complete the
-picture; see the roadmap.
+Level 5 brings in the second direction through the rings; see below.
 
 ## What is true to life
 
@@ -67,8 +66,41 @@ Each fault shows only on the pattern a technician would use: purity on the red
 field, convergence on the dots. The advice line at the bottom follows the same
 reasoning: centre before edges, rings before yoke before strips.
 
-Not modelled yet: clamping and wedging the yoke, sealing the rings with paint,
-warm-up drift, and the second (vertical) direction.
+The job ends as a real one does: press K to wedge the yoke and seal the rings
+with paint. After that nothing turns. Breaking the seal to correct a mistake
+costs a star, as scraping paint off a ring costs time on a bench.
+
+## Level 5: the second direction
+
+The playfield is still the slice through the gun row. The other direction,
+across the row, is carried by the rings:
+
+- Each convergence ring (squeeze and shift) has a **direction** as well as a
+  **strength**: 0, 45, 90 or 135 degrees. This is the real pair of adjustments:
+  turn both tabs together for direction, spread them for strength.
+- The part of a ring's effect that lies along the gun row bends the beams in
+  the playfield. The part that lies across it shows in the mirror as a sideways
+  split.
+- A knocked ring is cancelled by setting the same direction and the opposite
+  strength.
+- Purity has no second direction here, and that is true of a real in-line tube:
+  the phosphor is in vertical stripes, so landing a little high or low does not
+  change the colour.
+
+Two techniques from the bench come with it:
+
+- **Crosshatch.** A third test pattern. A coloured edge on the level lines is an
+  error along the gun row; on the upright lines, across it.
+- **Gun switches.** Switch green off (key 8) and red and blue alone should make
+  one magenta picture: that is the squeeze (four-pole) adjustment by itself.
+  Switch green on again and lay the magenta on it: that is the shift (six-pole)
+  adjustment.
+
+Still simplified in the second direction: magnetised parts, strips and the
+yoke act only along the gun row. A second full playfield (the side view) would
+be needed to give them a second direction too.
+
+Not modelled yet: warm-up drift, and a second playfield for the side view.
 
 ## What is simplified
 

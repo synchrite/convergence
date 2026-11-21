@@ -247,3 +247,29 @@ Priority set by the owner: real CRT repair technique first.
   each mode.
 - `docs/REAL-CRT.md` has a table setting each step on a real set beside its
   stage in the game.
+
+## 2026-11-21: locking, gun switches, crosshatch, and the second direction
+
+The four things listed as not yet modelled after level 4.
+
+- **Lock (K).** Level 4 and 5 jobs (stages 5 to 10) end by wedging the yoke and
+  sealing the rings with paint. Nothing turns after that. Breaking the seal
+  costs a star. The job list gains "5 LOCK"; wedges and paint dabs are drawn.
+- **Gun switches (7, 8, 9, or the R G B buttons).** A gun that is off draws no
+  beam and no picture. With green off, red and blue alone make magenta, which
+  isolates the squeeze adjustment. A stage cannot be finished with a gun off.
+- **Crosshatch.** A third test pattern in the mirror. Level lines show the error
+  along the gun row, upright lines the error across it. Patterns now cycle
+  dots, crosshatch, red field, and are available on every level.
+- **Level 5: the second direction.** Ten more stages. Each convergence ring has a
+  direction (0, 45, 90, 135 degrees) as well as a strength, as the real tabs do.
+  The part of its effect along the gun row bends the beams in the playfield;
+  the part across it shows in the mirror as a sideways split. Stages 5-1 to 5-4
+  teach it with rings alone; 5-5 to 5-10 are whole jobs in both directions.
+- Convergence is now measured as distance in both directions together.
+- Checked: stages 5-1 to 5-4 are fixed by matching the ring's direction and
+  setting the opposite strength, with no strips; all ten level 5 stages pass
+  the solver in each mode; a level 4 job does not pass until it is locked, and
+  a sealed ring refuses to turn.
+- Simplified: magnetised parts, strips and the yoke still act only along the
+  gun row.

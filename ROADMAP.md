@@ -6,11 +6,13 @@ Nothing below is built unless it is listed under "Done".
 
 ## Done
 
-- Browser game: tutorial, 40 stages in four levels, strips, neck rings,
+- Browser game: tutorial, 50 stages in five levels, strips, neck rings,
   easy, medium and hard modes, title screen, music.
 - Level 4: the real alignment procedure (degauss, purity on a red field with
   ring and yoke slide, static convergence with rings, dynamic convergence with
-  yoke tilt, strips last), with switchable test patterns.
+  yoke tilt, strips last), with switchable test patterns and a lock to finish.
+- Level 5: the second direction through ring direction and strength; crosshatch
+  pattern; gun switches.
 - DOS edition: service bench (geometry, focus, black level, purity, static and
   dynamic convergence, degauss), test patterns for a real monitor, handbook.
 
@@ -49,11 +51,11 @@ alignment:
 
 ## Next for real technique
 
-- Clamp and wedge the yoke, and seal the rings, as a final step that cannot be undone.
-- Gun switches: turn green off to see red and blue alone as magenta.
-- A crosshatch pattern as well as dots.
-- The second (vertical) view, so each ring gains direction as well as strength.
+- A second playfield (the side view), so parts, strips and the yoke also act
+  across the gun row. The rings already do, from level 5.
+- Warm-up drift: a set that changes for its first minutes.
 - Stages for medium and hard that reward turning a strip.
+- Review of the procedure text by someone who has done it on a bench.
 
 ## Open questions
 
