@@ -39,6 +39,11 @@ libraries. Open the file to run it.
   `tools/find_seeds.js` (run it again after any change to the physics or to
   `cfg`). Fault parts are placed by `sitePart` on or outside the glass. The
   title picture is made and embedded by `tools/paint_title.py --embed`.
+  Strips: `placeAt` snaps to the grid (and, in easy mode, to the picture's beam
+  line); `sim` samples each step five times inside strips; `meas` and `effectOf`
+  give the numbers shown to the player; `drawRuler` tabulates the strip in hand
+  along the tube. Any change to `sim` means running `tools/find_seeds.js` again
+  for all three modes (about four minutes for each half of a mode).
 - **`v2/index.html`** integrates `du/dt = (q/m)(E + v x B)` with a relativistic
   Boris pusher, 420 steps a trace. Spot position against drive is tabulated per
   axis and inverted for S-correction. `window.__v2` exposes the state.

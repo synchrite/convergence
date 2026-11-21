@@ -273,3 +273,43 @@ The four things listed as not yet modelled after level 4.
   a sealed ring refuses to turn.
 - Simplified: magnetised parts, strips and the yoke still act only along the
   gun row.
+
+## 2026-11-21: strip bug fixed, measurement tools, heavier music
+
+**Bug: the upright squeezer barely worked.** Reported as a glitch in level 1
+strip placement. A squeezer's push varied across the strip's width. For an
+upright strip (the only kind in easy mode) that is along the beam's travel, so
+a beam was pushed one way entering and the other way leaving, and almost
+nothing was left. What was left depended on where the simulation's 5 pixel
+steps fell, so it flickered between two values as the strip slid. Measured
+before the fix: a gap of 5.2 changed by about 0.5, jumping every few pixels.
+
+- A squeezer's push now grows with distance from the strip's centre line across
+  the beams, whichever way the strip is turned.
+- The bend is summed over five samples a step, so it follows the true length of
+  path inside the strip and changes smoothly.
+- Measured after: sliding from the screen to the neck changes the gap smoothly
+  from 0 to about 10 at strength 2; flipping the strip reverses it.
+- The earlier stage checks had passed only because the solver exploited the
+  flicker. All 50 stages were re-checked in all three modes after the fix.
+
+**Measure, look up, place.** Feedback: placing strips was fiddly hunt-and-peck.
+
+- The bottom line now shows measurements of the marked picture, signed, in
+  pixels at the screen: GAP (blue minus red), OFF (their middle minus green),
+  LAND (all three minus the white mark), and from level 5 the sideways pair.
+- A ruler across the top of the tube shows how much the strip in hand would
+  change the gap (or the landing, for a mover) at each place along the tube.
+  A gap of +5 is cancelled by putting the strip at the "-5" mark.
+- Each strip carries a label with its exact effect ("GAP -5.0"). While a strip
+  is in hand the bottom line also shows the value it would leave.
+- Strips sit on a 4 pixel grid. In easy mode and the tutorial a strip centres
+  itself on the picture's beam line, so only its distance along the tube is
+  chosen. The solver obeys the same rule, and all stages pass with it.
+- The rings box states the unit: one click moves the beams 1.5.
+- Stage 1-1 to 1-3 and the tutorial now teach this method.
+
+**Music.** The bass has a sub-octave under every note and a held low root under
+each half bar, and more bite. An "intrigue" melody (E minor with its leading
+tone, sparse, with echoes) plays for four bars in every sixteen. The level was
+lowered to stop clipping (rendered peak 0.92). The DOS edition's music is unchanged.

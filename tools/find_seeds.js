@@ -11,8 +11,9 @@ const {chromium}=require('playwright'),fs=require('fs'),path=require('path');
   const mode=process.argv[2]||'easy';await p.evaluate(m=>window.__gen.setMode(m),mode);console.log('mode',mode);
   const from=+(process.argv[3]||1);   // optional: first stage to search; earlier ones keep their stored seeds
   const old=JSON.parse(fs.readFileSync(file,'utf8').split('/*SEEDS*/')[1].split('/*END-SEEDS*/')[0])[mode]||[];
+  const to=+(process.argv[4]||50);     // optional: last stage to search
   const seeds=[null];for(let i=1;i<from;i++)seeds.push(old[i]??null);
-  for(let st=from;st<=50;st++){
+  for(let st=from;st<=to;st++){
     const r=await p.evaluate(async st=>{
       const G=window.__gen,V=window.__cv,c=G.cfg(st);
       for(let t=0;t<40;t++){
@@ -27,6 +28,7 @@ const {chromium}=require('playwright'),fs=require('fs'),path=require('path');
     console.log('stage',st,r?JSON.stringify(r):'NO SOLVABLE LAYOUT FOUND');
     seeds.push(r?r.t:null);
   }
+  for(let i=to+1;i<=50;i++)seeds.push(old[i]??null);
   await b.close();
   let s=fs.readFileSync(file,'utf8');const a=s.indexOf('/*SEEDS*/'),z=s.indexOf('/*END-SEEDS*/');
   const all=JSON.parse(s.slice(a+9,z));all[mode]=seeds;
