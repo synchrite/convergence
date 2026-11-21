@@ -462,3 +462,21 @@ real experience of adjusting convergence.
   screen and music stay with it. `tools/find_seeds.js` and
   `tools/paint_title.py` write to the new path.
 - Links, README and docs updated to match.
+
+## 2026-11-21: the Convergence Bench in the DOS edition
+
+- `dos/src/cbench.c`: the Convergence Bench ported to DOS. The twelve jobs,
+  the diagnosis question, the rear and side views, ring pairs, yoke tilt, strip
+  fitting (lay, move round, slide in, flip, tape, peel), degauss, lock, hints,
+  help levels and the three medals are the same as on the browser main page.
+  Integer math only (offsets in 1/127 pixel).
+- It is the first item on the DOS main menu. The earlier DOS game is kept as
+  "Monitor service".
+- Keyboard only. A strip is laid at 12 o'clock and moved with the arrow keys.
+  One run of key presses on one control counts as one move, so the par counts
+  of the browser edition hold.
+- `CONVERGE.SAV` is now version 2 and holds the bench medals; version 1 files
+  still load.
+- Checked in DOSBox-X (486, S3 SVGA) by script: every job shows its fault,
+  passes after the cure and the correct diagnosis, and job 11 was completed by
+  key presses alone. Not run on real hardware.

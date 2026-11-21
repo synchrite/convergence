@@ -57,6 +57,10 @@ extern const char *tp_name[]; extern const char *tp_help[][6]; extern const int 
 #define F_STRIP2 16384
 #define F_STRIP3 32768
 
+/* cbench.c: the Convergence Bench, the same game as the browser edition's main page */
+void cbench_menu(int help_level);
+extern u8 cb_medal[12];
+
 /* patterns.c */
 void testpatterns(void);
 #endif

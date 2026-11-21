@@ -70,6 +70,7 @@ deflection against `L*l*Vp/(2*d*Va)`).
 | `sys.c` | Timer, keyboard, scripted test mode |
 | `snd.c` | OPL2 driver and sequencer, songs, Sound Blaster DSP and DMA, PC speaker |
 | `crt.c` | The simulated monitor: geometry, convergence, purity, focus, black level |
+| `cbench.c` | The Convergence Bench: the browser main page's game, in integer math, keyboard driven |
 | `game.c` | Menus, bench, panel and diagrams, hints, scoring, report, career, save file |
 | `patterns.c` | Full-screen patterns for the real monitor |
 | `text.c` | Control descriptions, jobs, handbook, pattern notes |
