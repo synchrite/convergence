@@ -34,6 +34,10 @@ button[aria-pressed=true]{background:#14301f;border-color:var(--acc)}
   <button id="bG0" aria-pressed="true" title="Red gun (7)">R</button><button id="bG1" aria-pressed="true" title="Green gun (8)">G</button><button id="bG2" aria-pressed="true" title="Blue gun (9)">B</button>
   <button id="bDeg" title="Degauss the shadow mask (D)">Degauss</button>
   <button id="bLock" title="Wedge the yoke and seal the rings (K)">Lock</button>
+  <button id="bView" title="Change between the rear view and the side view (V)">View</button>
+  <button id="bFlip" title="Turn the chosen strip over (F)">Flip strip</button>
+  <button id="bTape" title="Tape the chosen strip down, or take the tape off (T)">Tape</button>
+  <button id="bPeel" title="Peel the chosen strip off the glass (X)">Peel</button>
   <button id="bHint" title="Ask what to do next. It costs the economy medal. (H)">Hint</button>
   <button id="bShip" title="Hand the set back (Enter)">Ship it</button>
   <button id="bPrev">&lt; Job</button><button id="bNext">Job &gt;</button>
@@ -41,7 +45,8 @@ button[aria-pressed=true]{background:#14301f;border-color:var(--acc)}
   <label class="note"><input type="checkbox" id="unflip"> Un-reverse the mirror</label>
 </div>
 <div id="msg" role="status"></div>
-<p class="note"><b>Hands.</b> Drag a tab round the neck to move it. Drag the coloured band between a pair of tabs to turn both together. Turning a pair changes the <i>direction</i> it pushes the beams; spreading its two tabs apart changes <i>how hard</i>; tabs together cancel. Drag the dot in the YOKE pad to tilt the yoke, and the slider to move it along the neck. Click a square on the glass to stick a strip there; click again to flip it, again to peel it off. Keyboard: Tab chooses a ring, Left and Right turn the pair, Up and Down spread it.</p>
+<p class="note"><b>Hands.</b> Drag a tab round the neck to move it. Drag the coloured band between a pair of tabs to turn both together. Turning a pair changes the <i>direction</i> it pushes the beams; spreading its two tabs apart changes <i>how hard</i>; tabs together cancel. Drag the dot in the YOKE pad to tilt the yoke, and the slider to move it along the neck. Keyboard: Tab chooses a ring, Left and Right turn the pair, Up and Down spread it.</p>
+<p class="note"><b>Fitting a strip.</b> There are two views of the same assembly; V changes between them. A convergence strip is a small flat magnet that goes between the front edge of the yoke and the funnel glass. 1. Rear view: click the glass at the place round the tube nearest the bad corner, and drag the strip round if it needs moving. 2. Side view: drag it left to push it further in under the yoke, watching the corner in the mirror; further in is stronger. 3. If the fringe gets worse, turn the strip over (F). 4. When the corner is white, tape it down (T). A loose strip moves, and the set comes back. X peels a strip off. There are four on the sheet.</p>
 <p class="note"><b>The rings.</b> Purity (2-pole) moves all three beams together: judge it on the red field. 4-pole moves red and blue in opposite directions: use it to lay red on blue (with green off they make magenta). 6-pole moves red and blue the same way: use it to lay that magenta on green. Green never moves. The rings act on the whole picture equally, so they are set on the centre. What is left at the edges is for the yoke, and what is left in a corner after that is for a strip.</p>
 <p class="note">Inspired by <i>Charge!</i> by C. Anthony Ray (BYTE, December 1982). See also <a href="../index.html">inside the tube</a>, the beam-path game this grew from, and <a href="../docs/DESIGN.md">the design specification</a>. The model is a teaching model; a real chassis differs in detail. Never open a real set unless you are trained: it holds lethal voltages.</p>
 </main>
@@ -60,32 +65,38 @@ const W=640,H=400;
    Yoke tilt: red and blue cross in proportion to distance from the centre (edges, not centre).
    Yoke slide: purity error in proportion to distance from the centre.
    Strip at one of 8 places round the glass: red and blue part, strongly near that edge only. */
-const STEP=Math.PI*2/48,S=7,KT=0.9,KS=1.7,TOL=1.25,PTOL=0.9;
-const SDX=[0,.707,1,.707,0,-.707,-1,-.707],SDY=[-1,-.707,0,.707,1,.707,0,-.707];
+const STEP=Math.PI*2/48,S=7,KT=0.9,TOL=1.25,PTOL=0.9;
+/* A convergence strip is a small flat magnet that is slid between the front of the yoke and the funnel glass.
+   Three things are decided by hand: where round the tube it goes (72 steps of 5 degrees), how far in under
+   the yoke it is pushed (depth 1 to 5: further in, stronger), and which face is against the glass (flip).
+   When the corner is right the strip is taped down. It acts on the part of the picture nearest to it. */
+const A5=Math.PI*2/72,KS1=1.3,SHEET=4;
 const ringVec=r=>{const a=r.a*STEP,b=r.b*STEP;return{x:S*(Math.cos(a)-Math.cos(b))/2,y:S*(Math.sin(a)-Math.sin(b))/2}};
 let st=null;      // the set on the bench
 function newSet(stage){
   const z=()=>({a:0,b:0});
-  st={rings:[z(),z(),z()],sol:[z(),z(),z()],tilt:{x:0,y:0},tsol:{x:0,y:0},slide:0,ssol:0,strips:[0,0,0,0,0,0,0,0],stsol:[0,0,0,0,0,0,0,0],
+  st={rings:[z(),z(),z()],sol:[z(),z(),z()],tilt:{x:0,y:0},tsol:{x:0,y:0},slide:0,ssol:0,strips:[],fstr:[],
       mag:false,blot:{u:.4,v:-.3},locked:false,unlocks:0,moves:0,hints:0,diagOk:null};
   const f=stage.fault||{};
   // a fault is stated as the setting that cures it; the set starts with everything at rest
   ['pu','p4','p6'].forEach((k,i)=>{if(f[k])st.sol[i]={a:f[k][0],b:f[k][1]}});
   if(f.tilt)st.tsol={x:f.tilt[0],y:f.tilt[1]};
   if(f.slide)st.ssol=f.slide;
-  if(f.strips)f.strips.forEach(([i,v])=>{st.stsol[i]=v});
+  if(f.strips)st.fstr=f.strips.map(([ang,amt])=>({ang,amt}));
+  ssel=-1;
   if(f.mag)st.mag=true;
 }
 function resid(){
   const r=st.rings.map((q,i)=>{const a=ringVec(q),b=ringVec(st.sol[i]);return{x:a.x-b.x,y:a.y-b.y}});
-  return{pu:r[0],p4:r[1],p6:r[2],tx:st.tilt.x-st.tsol.x,ty:st.tilt.y-st.tsol.y,sl:st.slide-st.ssol,sd:st.strips.map((v,i)=>v-st.stsol[i])};
+  return{pu:r[0],p4:r[1],p6:r[2],tx:st.tilt.x-st.tsol.x,ty:st.tilt.y-st.tsol.y,sl:st.slide-st.ssol,
+    sd:st.strips.map(q=>({ang:q.ang,amt:q.pol*q.depth})).concat(st.fstr.map(q=>({ang:q.ang,amt:-q.amt})))};
 }
 function conv(R,c,u,v){   // landing error of gun c (0 red, 1 green, 2 blue) at screen position u, v
   if(c===1)return[0,0];
   const s=c===0?1:-1;
   let x=s*R.p4.x+R.p6.x,y=s*R.p4.y+R.p6.y;
   x+=s*R.tx*v*KT;y+=s*R.ty*u*KT;
-  for(let i=0;i<8;i++)if(R.sd[i]){const p=u*SDX[i]+v*SDY[i];if(p>0){const w=Math.min(1.3,p)**3,k=s*R.sd[i]*w*KS;x+=-SDY[i]*k;y+=SDX[i]*k}}
+  for(const e of R.sd){const c=Math.cos(e.ang*A5),sn=Math.sin(e.ang*A5),p=u*c+v*sn;if(p>0){const w=Math.min(1.3,p)**3,k=s*e.amt*w*KS1;x+=-sn*k;y+=c*k}}
   return[x,y];
 }
 function tint(R,u,v){     // purity error 0..1 at a screen position
@@ -131,19 +142,19 @@ const JOBS=[
   intro:'The centre is white but the top and bottom split in opposite directions. No ring can do that: rings treat the whole picture alike. The yoke has tilted. Drag the dot in the YOKE pad until the edges close.'},
  {t:'C',name:'Centre first',cust:'"Fringes everywhere, worse at the sides."',tools:['p4','tilt'],fault:{p4:[16,28],tilt:[0,-4]},pat:'grid',par:3,diag:['dyn','stat','pur'],ans:'stat',
   intro:'Two faults at once. Get the CENTRE right with the ring first. Only then can you see what the yoke is doing at the edges.',why:'The centre is split, so the rings must be wrong. There is an edge fault as well, but the centre is always dealt with first.'},
- {t:'A',name:'One bad corner',cust:'"Just the one corner."',tools:['strips'],fault:{strips:[[1,1]]},pat:'grid',par:1,
-  intro:'Centre and three corners are white. One corner is not. That is what a strip is for: a small magnet stuck on the glass at the place nearest the fault. Click the square at that corner. If it gets worse, click again to flip the strip.'},
+ {t:'A',name:'One bad corner',cust:'"Just the one corner."',tools:['strips'],fault:{strips:[[63,2]]},pat:'grid',par:4,
+  intro:'Centre and three corners are white; one corner is not. That is what a strip is for. 1: in the rear view, click the glass at the place nearest the bad corner (the mirror and the rear view match: left is left). 2: press V for the side view and drag the strip in under the yoke, watching the corner in the mirror. 3: if it gets worse, flip it (F). 4: when the corner is white, tape it down (T).'},
  {t:'D',name:'Mrs Lindqvist\'s console set',cust:'"It was dropped in the removal. Nothing is where it should be."',tools:['pu','p4','p6','tilt','strips','degauss','lock'],
-  fault:{pu:[6,14],p4:[22,36],p6:[40,46],tilt:[3,-2],strips:[[5,-1]],mag:true},pat:'red',par:11,diag:['stat','mag','dyn','pur'],ans:'mag',
+  fault:{pu:[6,14],p4:[22,36],p6:[40,46],tilt:[3,-2],strips:[[27,-2]],mag:true},pat:'red',par:14,diag:['stat','mag','dyn','pur'],ans:'mag',
   intro:'The whole alignment. Degauss. Purity. Centre with the rings. Edges with the yoke. The last corner with a strip. Lock.',why:'Start with what would spoil every later judgement: the magnetised mask.'}
 ];
 /* ================= state ================= */
-let job=0,phase='work',pat='grid',guns=[true,true,true],help=0,unflip=false,sel=1,drag=null,tick=0,medals=null;
+let job=0,phase='work',pat='grid',guns=[true,true,true],help=0,unflip=false,sel=1,drag=null,tick=0,medals=null,view='rear',ssel=-1;
 const hasTool=k=>JOBS[job].tools.includes(k);
 const say=t=>{$('msg').textContent=t};
 function load(i){
   job=Math.max(0,Math.min(JOBS.length-1,i));const J=JOBS[job];newSet(J);pat=J.pat;guns=[true,true,true];medals=null;
-  sel=J.tools.includes('p4')?1:J.tools.includes('p6')?2:0;
+  sel=J.tools.includes('p4')?1:J.tools.includes('p6')?2:0;view='rear';
   try{location.hash='job-'+(job+1)}catch(e){}
   if(J.diag){phase='diag';showDiag()}else{phase='work';hideCard();say('Job '+(job+1)+' of '+JOBS.length+': '+J.name+'. '+J.cust+' '+J.intro)}
   sync();
@@ -172,6 +183,7 @@ const MX=14,MY=40,MW=372,MH=279;          // the picture in the mirror
 const NX=518,NY=176;                        // centre of the neck, seen from behind
 const RR=[40,54,68],RC=['#ffd83c','#ff58ff','#3ce6ff'],RN=['PURITY 2-POLE','4-POLE','6-POLE'],RK=['pu','p4','p6'];
 const YR=86,GR=104;                         // yoke and glass radii in the rear view
+const FLIP=()=>unflip?-1:1;                 // from behind, the screen's right is on your left
 function txt(s,x,y,c,size,al){g.font=(size||12)+'px ui-monospace,Menlo,Consolas,monospace';g.fillStyle=c||'#dbe5ff';g.textAlign=al||'left';g.textBaseline='top';g.fillText(s,x,y)}
 function sx(u){return MX+MW/2+(unflip?u:-u)*MW*.44}     // the mirror reverses left and right
 function sy(v){return MY+MH/2+v*MH*.44}
@@ -206,9 +218,17 @@ function drawRear(M){
   txt('REAR OF THE SET',NX,MY-28,'#dbe5ff',14,'center');
   // funnel glass, with the eight places a strip can go
   g.fillStyle='#0b1a22';g.beginPath();g.arc(NX,NY,GR+12,0,7);g.fill();g.strokeStyle='#5c8ea0';g.lineWidth=2;g.beginPath();g.arc(NX,NY,GR+12,0,7);g.stroke();
-  for(let i=0;i<8;i++){const x=NX-SDX[i]*GR*(unflip?-1:1),y=NY+SDY[i]*GR,v=st.strips[i],on=hasTool('strips');   // from behind, the screen's right is on your left
-    g.fillStyle=v>0?'#ff8a3c':v<0?'#4c9cff':'#0d1320';g.fillRect(x-9,y-9,18,18);g.strokeStyle=on?'#dbe5ff':'#3a4664';g.lineWidth=1;g.strokeRect(x-9.5,y-9.5,19,19);
-    if(v)txt(v>0?'+':'-',x,y-8,'#000',14,'center')}
+  // clock marks on the glass, so a place can be named
+  for(let h=0;h<12;h++){const a=h/12*6.283-1.5708;g.fillStyle='#35506a';g.fillRect(NX+Math.cos(a)*(GR+9)-1,NY+Math.sin(a)*(GR+9)-1,3,3)}
+  if(hasTool('strips')&&help===0){   // apprentice: a mark at the part of the edge that is worst
+    let w=0,wu=0,wv=0;PTS.slice(1).forEach(([u,v])=>{const r=conv(M.R,0,u,v),b=conv(M.R,2,u,v),d=Math.hypot(r[0]-b[0],r[1]-b[1]);if(d>w){w=d;wu=u;wv=v}});
+    if(w>TOL){const a=Math.atan2(wv,wu),x=NX-Math.cos(a)*(GR+22)*FLIP(),y=NY+Math.sin(a)*(GR+22);g.fillStyle='#fff';g.beginPath();g.arc(x,y,3,0,7);g.fill()}}
+  st.strips.forEach((q,i)=>{const a=q.ang*A5,rad=GR+8-q.depth*4,cx=NX-Math.cos(a)*rad*FLIP(),cy=NY+Math.sin(a)*rad,tx=Math.sin(a)*FLIP(),ty2=Math.cos(a);
+    g.save();g.translate(cx,cy);g.rotate(Math.atan2(ty2,tx));
+    g.fillStyle=q.pol>0?'#ff8a3c':'#4c9cff';g.fillRect(-12,-3,24,6);g.strokeStyle=i===ssel?'#fff':'#000';g.lineWidth=i===ssel?2:1;g.strokeRect(-12.5,-3.5,25,7);
+    if(q.taped){g.fillStyle='#f4f0d8';g.fillRect(-3,-7,6,14)}
+    g.restore()});
+  if(hasTool('strips'))txt('STRIPS LEFT ON THE SHEET: '+(SHEET-st.strips.length),NX,NY+GR+28,'#8493b8',11,'center');
   // yoke
   const ty=hasTool('tilt')?st.tilt:{x:0,y:0};
   g.strokeStyle='#c87832';g.lineWidth=12;g.beginPath();g.ellipse(NX+ty.y*1.2,NY+ty.x*1.2,YR,YR-Math.abs(ty.x)*.8,0,0,7);g.stroke();
@@ -226,13 +246,49 @@ function drawRear(M){
   // the three guns at the bottom of the neck, in a row
   for(let c=0;c<3;c++){g.fillStyle=guns[c]?['#ff4040','#40ff60','#5080ff'][c]:'#222';g.beginPath();g.arc(NX-12+c*12,NY,4,0,7);g.fill()}
   txt(RN[sel]+(hasTool(RK[sel])?'':' (not on this job)'),NX,NY+GR+14,RC[sel],12,'center');
-  // yoke pad and slide
+
+}
+function clockName(q){const a=q.ang*A5,d=Math.atan2(Math.sin(a),-Math.cos(a)*FLIP())*180/Math.PI,h=((Math.round((d+90)/30)%12)+12)%12;return (h===0?12:h)+" o'clock"}
+function drawSide(M){
+  txt('SIDE OF THE NECK',NX,MY-28,'#dbe5ff',14,'center');
+  const cy=NY,x0=412;
+  // funnel glass, flaring toward the screen on the right
+  g.fillStyle='#0b1a22';g.strokeStyle='#5c8ea0';g.lineWidth=2;
+  g.beginPath();g.moveTo(x0,cy-17);g.lineTo(506,cy-17);g.lineTo(634,cy-112);g.lineTo(634,cy+112);g.lineTo(506,cy+17);g.lineTo(x0,cy+17);g.closePath();g.fill();g.stroke();
+  // gun pins and base
+  g.fillStyle='#8a94a8';for(let i=-2;i<=2;i++)g.fillRect(x0-8,cy+i*6-1,8,2);g.fillStyle='#2a3348';g.fillRect(x0,cy-19,10,38);
+  // the three ring pairs on the neck
+  [0,1,2].forEach(i=>{const x=x0+22+i*18,on=hasTool(RK[i]);g.fillStyle=on?RC[i]:'#2a3348';g.fillRect(x,cy-25,9,50);g.fillStyle=on?'#fff':'#3a4664';g.fillRect(x+1,cy-31,7,6);g.fillRect(x+1,cy+25,7,6)});
+  // strips: slid in between the front of the yoke and the glass; the part that is in is hidden by the yoke
+  const sstrip=(q,outline)=>{const sn=Math.sin(q.ang*A5),sg=sn<-.3?-1:sn>.3?1:0,in_=q.depth*7;
+    g.save();
+    if(sg){g.translate(552-in_*.8,cy+sg*(53-in_*.6));g.rotate(sg*Math.atan2(95,128))}else g.translate(566-in_,cy-7);
+    const y0=sg<0?-6:sg>0?1:0,h=sg?5:14;
+    if(outline){g.strokeStyle='#fff';g.lineWidth=1;g.setLineDash([3,2]);g.strokeRect(-4.5,y0-.5,41,h+1);g.setLineDash([])}
+    else{g.fillStyle=q.pol>0?'#ff8a3c':'#4c9cff';g.fillRect(-4,y0,40,h);g.strokeStyle='#000';g.lineWidth=1;g.strokeRect(-4.5,y0-.5,41,h+1);
+      if(q.taped){g.fillStyle='#f4f0d8';g.fillRect(18,y0-4,9,h+8)}}
+    g.restore()};
+  st.strips.forEach(q=>sstrip(q,false));
+  // the yoke: windings wrapped round the start of the funnel
+  for(const sg of[-1,1]){g.fillStyle='#c87832';g.beginPath();g.moveTo(480,cy+sg*19);g.lineTo(508,cy+sg*19);g.lineTo(548,cy+sg*49);g.lineTo(548,cy+sg*72);g.lineTo(480,cy+sg*46);g.closePath();g.fill();
+    g.strokeStyle='#7a4416';g.lineWidth=1;for(let k=0;k<7;k++){g.beginPath();g.moveTo(484+k*9,cy+sg*(21+k*2));g.lineTo(484+k*9,cy+sg*(46+k*3.6));g.stroke()}
+    if(st.locked){g.fillStyle='#e8e8f0';g.beginPath();g.moveTo(548,cy+sg*50);g.lineTo(562,cy+sg*60);g.lineTo(548,cy+sg*66);g.closePath();g.fill()}}
+  if(ssel>=0&&st.strips[ssel])sstrip(st.strips[ssel],true);
+  // how far in: a scale on the glass
+  if(ssel>=0&&st.strips[ssel]){const q=st.strips[ssel];
+    txt('STRIP '+(ssel+1)+': '+clockName(q)+', IN '+q.depth+' OF 5',NX,NY+118,'#dbe5ff',11,'center');
+    txt((q.pol>0?'+ FACE':'- FACE')+' TO THE GLASS'+(q.taped?', TAPED':', LOOSE'),NX,NY+132,q.taped?'#6dff9a':'#ffd25c',11,'center');
+    txt('drag left: further in under the yoke',NX,NY-128,'#8493b8',11,'center');
+  }else txt(hasTool('strips')?'pick a strip in the rear view (V)':'no strips on this job',NX,NY+124,'#8493b8',11,'center');
+}
+function drawYokeControls(){
   const px=436,py=336;
   txt('YOKE TILT',px,py-16,hasTool('tilt')?'#ffb060':'#3a4664',11);g.strokeStyle=hasTool('tilt')?'#ffb060':'#3a4664';g.lineWidth=1;g.strokeRect(px+.5,py+.5,56,56);
   g.beginPath();g.moveTo(px+28,py);g.lineTo(px+28,py+56);g.moveTo(px,py+28);g.lineTo(px+56,py+28);g.stroke();
   g.fillStyle=hasTool('tilt')?'#ffb060':'#3a4664';g.beginPath();g.arc(px+28+st.tilt.y*4,py+28+st.tilt.x*4,5,0,7);g.fill();
   txt('YOKE SLIDE',px+72,py-16,hasTool('slide')?'#ffb060':'#3a4664',11);g.strokeStyle=hasTool('slide')?'#ffb060':'#3a4664';g.strokeRect(px+72.5,py+20.5,112,14);
   g.fillRect(px+72+56+st.slide*8-3,py+16,6,22);
+  txt('VIEW: '+(view==='rear'?'REAR':'SIDE')+'  (V)',620,py+44,'#ffd25c',11,'right');
 }
 function drawSheet(M){
   // job sheet: the order of work, ticked as each part comes right
@@ -250,7 +306,7 @@ function drawSheet(M){
 }
 function frame(){
   tick++;g.fillStyle='#070b14';g.fillRect(0,0,W,H);
-  const M=measure();drawMirror(M);drawRear(M);drawSheet(M);
+  const M=measure();drawMirror(M);if(view==='rear')drawRear(M);else drawSide(M);drawYokeControls();drawSheet(M);
   if(phase==='diag'){g.fillStyle='rgba(7,11,20,.72)';g.fillRect(400,0,240,H);txt('DIAGNOSE FIRST',NX,170,'#ffd25c',16,'center');txt('choose below',NX,194,'#dbe5ff',12,'center')}
   requestAnimationFrame(frame);
 }
@@ -261,40 +317,61 @@ function move(){st.moves++}
 function blocked(){if(st.locked){say('The yoke is wedged and the rings are sealed with paint. Press Lock again to break the seal. It costs the result medal.');beep(180,.15,'sawtooth',.06);return true}return false}
 cv.addEventListener('pointerdown',e=>{
   audio();cv.focus();if(phase!=='work')return;const p=pos(e),d=Math.hypot(p.x-NX,p.y-NY);
-  // strips on the glass
-  if(hasTool('strips'))for(let i=0;i<8;i++){const x=NX-SDX[i]*GR*(unflip?-1:1),y=NY+SDY[i]*GR;if(Math.abs(p.x-x)<11&&Math.abs(p.y-y)<11){if(blocked())return;st.strips[i]=st.strips[i]===0?1:st.strips[i]===1?-1:0;move();beep(st.strips[i]?90:300,.08,'sine',.15);check();return}}
+  // yoke pad and slide: the same in both views
+  if(hasTool('tilt')&&p.x>=436&&p.x<=492&&p.y>=336&&p.y<=392){if(blocked())return;drag={kind:'tilt',x0:st.tilt.x,y0:st.tilt.y};tiltTo(p);cv.setPointerCapture(e.pointerId);return}
+  if(hasTool('slide')&&p.x>=508&&p.x<=620&&p.y>=350&&p.y<=376){if(blocked())return;drag={kind:'slide',v0:st.slide};slideTo(p);cv.setPointerCapture(e.pointerId);return}
+  if(view==='side'){   // side view: push the chosen strip in under the yoke, or draw it out
+    if(hasTool('strips')&&ssel>=0&&p.x>404&&p.y<310){if(blocked())return;const q=st.strips[ssel];if(q.taped)return say('That strip is taped down. Take the tape off (T) before you move it.');
+      drag={kind:'depth',d0:q.depth,x0:p.x};cv.setPointerCapture(e.pointerId)}
+    else if(p.x>404&&p.y<310)say(hasTool('strips')?'Choose a strip first: press V for the rear view and click the glass where the strip should go.':'The side view is for strips. Press V to go back to the rings.');
+    return}
+  // rear view: strips on the glass, outside the yoke
+  if(hasTool('strips')&&d>YR+9&&d<GR+22){if(blocked())return;
+    const a=((Math.round(Math.atan2(p.y-NY,-(p.x-NX)*FLIP())/A5)%72)+72)%72;let near=-1,nd=4;
+    st.strips.forEach((q,i)=>{const dd=Math.min((q.ang-a+72)%72,(a-q.ang+72)%72);if(dd<nd){nd=dd;near=i}});
+    if(near>=0){ssel=near;const q=st.strips[near];if(q.taped){say('Strip '+(near+1)+' is taped. T takes the tape off.');return}
+      drag={kind:'sang',a0:q.ang};cv.setPointerCapture(e.pointerId);return}
+    if(st.strips.length>=SHEET)return say('The sheet is empty. Peel a strip off the glass (X) to use it somewhere else.');
+    st.strips.push({ang:a,depth:1,pol:1,taped:false});ssel=st.strips.length-1;move();beep(90,.08,'sine',.15);
+    say('Strip '+(ssel+1)+' laid on the glass at '+clockName(st.strips[ssel])+', just under the edge of the yoke. Press V for the side view and slide it in.');check();return}
   // ring tabs, then ring bands
   for(let i=2;i>=0;i--){if(!hasTool(RK[i]))continue;const r=st.rings[i];
     for(const k of['a','b']){const t=tabPos(i,r[k]);if(Math.abs(p.x-t[0])<9&&Math.abs(p.y-t[1])<9){if(blocked())return;sel=i;drag={kind:'tab',i,k,start:r[k]};cv.setPointerCapture(e.pointerId);return}}
     if(Math.abs(d-RR[i])<7){if(blocked())return;sel=i;drag={kind:'band',i,a0:angStep(p.x,p.y),ra:r.a,rb:r.b};cv.setPointerCapture(e.pointerId);return}}
-  // yoke pad and slide
-  if(hasTool('tilt')&&p.x>=436&&p.x<=492&&p.y>=336&&p.y<=392){if(blocked())return;drag={kind:'tilt',x0:st.tilt.x,y0:st.tilt.y};tiltTo(p);cv.setPointerCapture(e.pointerId);return}
-  if(hasTool('slide')&&p.x>=508&&p.x<=620&&p.y>=350&&p.y<=376){if(blocked())return;drag={kind:'slide',v0:st.slide};slideTo(p);cv.setPointerCapture(e.pointerId);return}
 });
 function tiltTo(p){const y=Math.max(-6,Math.min(6,Math.round((p.x-464)/4))),x=Math.max(-6,Math.min(6,Math.round((p.y-364)/4)));if(x!==st.tilt.x||y!==st.tilt.y){st.tilt={x,y};click()}}
 function slideTo(p){const v=Math.max(-6,Math.min(6,Math.round((p.x-564)/8)));if(v!==st.slide){st.slide=v;click()}}
 cv.addEventListener('pointermove',e=>{
   if(!drag)return;const p=pos(e),r=st.rings[drag.i];
-  if(drag.kind==='tab'){const a=angStep(p.x,p.y);if(a!==r[drag.k]){r[drag.k]=a;click()}}
+  if(drag.kind==='depth'){const q=st.strips[ssel],v=Math.max(1,Math.min(5,drag.d0+Math.round((drag.x0-p.x)/9)));if(v!==q.depth){q.depth=v;click()}}
+  else if(drag.kind==='sang'){const q=st.strips[ssel],a=((Math.round(Math.atan2(p.y-NY,-(p.x-NX)*FLIP())/A5)%72)+72)%72;if(a!==q.ang){q.ang=a;click()}}
+  else if(drag.kind==='tab'){const a=angStep(p.x,p.y);if(a!==r[drag.k]){r[drag.k]=a;click()}}
   else if(drag.kind==='band'){const dlt=angStep(p.x,p.y)-drag.a0,na=((drag.ra+dlt)%48+48)%48;if(na!==r.a){r.a=na;r.b=((drag.rb+dlt)%48+48)%48;click()}}
   else if(drag.kind==='tilt')tiltTo(p);else slideTo(p);
 });
 cv.addEventListener('pointerup',()=>{if(!drag)return;
-  const r=drag.i!=null?st.rings[drag.i]:null,changed=drag.kind==='tab'?r[drag.k]!==drag.start:drag.kind==='band'?r.a!==drag.ra:drag.kind==='tilt'?(st.tilt.x!==drag.x0||st.tilt.y!==drag.y0):st.slide!==drag.v0;
+  const r=drag.i!=null?st.rings[drag.i]:null,changed=drag.kind==='depth'?st.strips[ssel].depth!==drag.d0:drag.kind==='sang'?st.strips[ssel].ang!==drag.a0:drag.kind==='tab'?r[drag.k]!==drag.start:drag.kind==='band'?r.a!==drag.ra:drag.kind==='tilt'?(st.tilt.x!==drag.x0||st.tilt.y!==drag.y0):st.slide!==drag.v0;
   if(changed)move();drag=null;check()});
 window.addEventListener('keydown',e=>{
   if(e.ctrlKey||e.metaKey||e.altKey||['SELECT','INPUT'].includes(document.activeElement.tagName))return;audio();
   const k=e.key.toLowerCase();
-  if(k==='m')patNext();else if(k==='d')degauss();else if(k==='k')lock();else if(k==='h')hint();
+  if(k==='v')viewNext();else if(k==='f')flipStrip();else if(k==='t')tapeStrip();else if(k==='x'||k==='delete'||k==='backspace')peelStrip();
+  else if(view==='side'&&(k==='arrowleft'||k==='arrowright')&&ssel>=0&&phase==='work'){if(blocked())return;const q=st.strips[ssel];if(q.taped)return say('Taped. T takes the tape off.');const v=Math.max(1,Math.min(5,q.depth+(k==='arrowleft'?1:-1)));if(v!==q.depth){q.depth=v;move();click()}e.preventDefault()}
+  else if(k==='m')patNext();else if(k==='d')degauss();else if(k==='k')lock();else if(k==='h')hint();
   else if(k==='7'||k==='8'||k==='9')gun(+k-7);
   else if(k==='enter'&&document.activeElement.tagName!=='BUTTON')ship();
   else if(k==='tab'){for(let n=0;n<3;n++){sel=(sel+1)%3;if(hasTool(RK[sel]))break}e.preventDefault()}
-  else if(k.startsWith('arrow')&&phase==='work'&&hasTool(RK[sel])){if(blocked())return;const r=st.rings[sel];
+  else if(k.startsWith('arrow')&&phase==='work'&&view==='rear'&&hasTool(RK[sel])){if(blocked())return;const r=st.rings[sel];
     if(k==='arrowleft'){r.a=(r.a+47)%48;r.b=(r.b+47)%48}else if(k==='arrowright'){r.a=(r.a+1)%48;r.b=(r.b+1)%48}
     else if(k==='arrowup'){r.a=(r.a+47)%48;r.b=(r.b+1)%48}else{r.a=(r.a+1)%48;r.b=(r.b+47)%48}
     move();click();check();e.preventDefault()}
 });
 /* ================= tools ================= */
+function viewNext(){view=view==='rear'?'side':'rear';click();sync();say(view==='side'?'Side of the neck. The yoke sits on the start of the funnel; a strip goes into the gap between its front edge and the glass. Drag the chosen strip left to push it further in, right to draw it out.':'Rear of the set. Ring tabs, and the glass round the yoke where a strip is laid.')}
+const pick=()=>{if(phase!=='work'||!hasTool('strips'))return null;if(ssel<0||!st.strips[ssel]){say('Choose a strip first: click it on the glass in the rear view.');return null}return st.strips[ssel]};
+function flipStrip(){const q=pick();if(!q||blocked())return;if(q.taped)return say('Taped. T takes the tape off.');q.pol*=-1;move();beep(500,.06,'triangle',.05,0,900);say('Strip '+(ssel+1)+' turned over: the '+(q.pol>0?'+':'-')+' face is now against the glass. It pushes the colours the other way.')}
+function tapeStrip(){const q=pick();if(!q||blocked())return;q.taped=!q.taped;move();beep(q.taped?2200:700,.05,'square',.04);say(q.taped?'Strip '+(ssel+1)+' taped to the glass. It will stay where it is.':'Tape off strip '+(ssel+1)+'. It can be moved again.')}
+function peelStrip(){const q=pick();if(!q||blocked())return;if(q.taped)return say('Taped. T takes the tape off first.');st.strips.splice(ssel,1);ssel=-1;move();beep(300,.1,'sawtooth',.05,0,120);say('Strip peeled off and put back on the sheet.')}
 function patNext(){const P=['grid','dots','red'];pat=P[(P.indexOf(pat)+1)%3];click();say(pat==='red'?'Red field: purity. It must be the same pure red everywhere.':pat==='grid'?'Crosshatch: convergence. Every line must be white.':'Dots: convergence. Every dot must be one white dot.')}
 function gun(i){guns[i]=!guns[i];click();sync();say(guns.every(x=>x)?'All three guns on.':'Guns on: '+['red','green','blue'].filter((n,j)=>guns[j]).join(', ')+'. With green off, red and blue make magenta where they meet.')}
 function degauss(){if(phase!=='work')return;beep(60,1.1,'sawtooth',.14,0,45);if(hasTool('degauss'))move();
@@ -309,12 +386,14 @@ function hint(){if(phase!=='work')return;st.hints++;const M=measure(),R=M.R;let 
   else if(M.rb>TOL)t='Red and blue are apart at the centre: 4-pole rings. Green off makes it easy to see.';
   else if(M.mg>TOL)t='Red and blue are together but beside green: 6-pole rings.';
   else if(Math.abs(R.tx)+Math.abs(R.ty)>0)t='Centre is right, two opposite edges are split: tilt the yoke. Up and down splits at top and bottom are one axis, left and right the other.';
-  else if(R.sd.some(v=>v))t='One corner or edge is still split: a strip on the glass nearest to it. Flip it if it makes things worse.';
+  else if(M.edge>TOL)t='One part of the edge is still split, and the yoke cannot help: a strip. Rear view: lay it on the glass nearest the bad part. Side view (V): slide it in under the yoke until the fringe closes. Flip it (F) if it gets worse.';
+  else if(st.strips.some(q=>!q.taped))t='The picture is right, but a strip is loose. Tape it (T) or it will move.';
   else if(hasTool('lock')&&!st.locked)t='Everything is right. Lock it.';else t='It is right. Ship it.';
   say('Hint: '+t+' (Hints cost the economy medal.)')}
 function check(){sync()}
 function ship(){
   if(phase!=='work')return;const J=JOBS[job],M=measure(),ok=M.convOk&&(!needsPurity()||M.purOk)&&(!hasTool('lock')||st.locked)&&guns.every(x=>x);
+  if(ok&&st.strips.some(q=>!q.taped)){beep(160,.25,'sawtooth',.07);return say('Returned by the customer: "The fringe came back when I carried it in." A strip was left loose. Tape every strip (T) before the set leaves.')}
   if(!ok){beep(160,.25,'sawtooth',.07);
     return say('Returned by the customer. '+(!guns.every(x=>x)?'A gun is still switched off.':st.mag?'"There is still a cloud of colour."':needsPurity()&&!M.purOk?'"The red is still not red."':M.centre>TOL?'"Still coloured edges in the middle."':M.edge>TOL?'"Still fringes at the edges."':'It is right, but not locked: it will drift.'))}
   medals={d:J.diag?st.diagOk===true:true,e:st.moves<=J.par&&st.hints===0,r:st.unlocks===0};
@@ -322,8 +401,8 @@ function ship(){
   [523,659,784,1047].forEach((f,i)=>beep(f,.15,'square',.07,i*.09));phase='done';
   say('PASSED. Medals: diagnosis '+(medals.d?'yes':'no')+', economy '+(medals.e?'yes':'no ('+st.moves+' moves, par '+J.par+(st.hints?', '+st.hints+' hints':'')+')')+', result '+(medals.r?'yes':'no (seal broken)')+'. '+(job+1<JOBS.length?'Press Job > for the next set.':'That was the last job on the shelf.'));
 }
-function sync(){[0,1,2].forEach(i=>$('bG'+i).setAttribute('aria-pressed',guns[i]));$('bDeg').disabled=!hasTool('degauss');$('bLock').disabled=!hasTool('lock');$('bPrev').disabled=job===0;$('bNext').disabled=job===JOBS.length-1}
-$('bPat').onclick=patNext;[0,1,2].forEach(i=>{$('bG'+i).onclick=()=>gun(i)});$('bDeg').onclick=degauss;$('bLock').onclick=lock;$('bHint').onclick=hint;$('bShip').onclick=ship;
+function sync(){[0,1,2].forEach(i=>$('bG'+i).setAttribute('aria-pressed',guns[i]));$('bDeg').disabled=!hasTool('degauss');['bFlip','bTape','bPeel'].forEach(id=>{$(id).disabled=!hasTool('strips')});$('bView').textContent='View: '+(view==='rear'?'rear':'side');$('bLock').disabled=!hasTool('lock');$('bPrev').disabled=job===0;$('bNext').disabled=job===JOBS.length-1}
+$('bView').onclick=viewNext;$('bFlip').onclick=flipStrip;$('bTape').onclick=tapeStrip;$('bPeel').onclick=peelStrip;$('bPat').onclick=patNext;[0,1,2].forEach(i=>{$('bG'+i).onclick=()=>gun(i)});$('bDeg').onclick=degauss;$('bLock').onclick=lock;$('bHint').onclick=hint;$('bShip').onclick=ship;
 $('bPrev').onclick=()=>load(job-1);$('bNext').onclick=()=>load(job+1);
 $('help').onchange=e=>{help=+e.target.value;try{localStorage.setItem('bench-help',help)}catch(x){}};
 $('unflip').onchange=e=>{unflip=e.target.checked};
@@ -332,7 +411,7 @@ try{const h=localStorage.getItem('bench-help');if(h!=null){help=+h;$('help').val
 window.addEventListener('hashchange',()=>{const m=/^#job-(\d+)$/.exec(location.hash);if(m&&+m[1]-1!==job)load(+m[1]-1)});
 {const m=/^#job-(\d+)$/.exec(location.hash);load(m?+m[1]-1:0)}
 requestAnimationFrame(frame);
-window.__bench={get st(){return st},measure,JOBS,load,ship,get phase(){return phase},set phase(v){phase=v},ringVec,get medals(){return medals},degauss,lock};
+window.__bench={get view(){return view},viewNext,flipStrip,tapeStrip,peelStrip,get ssel(){return ssel},set ssel(v){ssel=v},get st(){return st},measure,JOBS,load,ship,get phase(){return phase},set phase(v){phase=v},ringVec,get medals(){return medals},degauss,lock};
 })();
 </script>
 </body></html>

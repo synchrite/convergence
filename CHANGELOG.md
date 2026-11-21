@@ -435,3 +435,21 @@ real experience of adjusting convergence.
   ring control works.
 - The beam-path game stays at `index.html` as "inside the tube", with a link to
   the bench at the top.
+
+## 2026-11-21: bench, two views and strip fitting by hand
+
+- The Convergence Bench has two views of the same assembly, changed with V or
+  the View button: the rear of the set (ring tabs, the glass round the yoke)
+  and the side of the neck (gun base, ring pairs, yoke on the funnel).
+- Strips are no longer eight fixed squares that are clicked on and off. A strip
+  is now fitted in four steps: lay it on the glass at a place round the tube
+  (72 places, 5 degrees apart; it can be dragged round), slide it in under the
+  front edge of the yoke in the side view (depth 1 to 5, further in is
+  stronger), turn it over if it makes the fringe worse (F), and tape it down
+  (T). X peels a strip off. The sheet holds four strips.
+- A set shipped with a loose strip is returned.
+- Jobs 11 and 12 use the new strips; their par counts were raised to 4 and 14.
+- The hint and the page help describe the new procedure. Apprentice help marks
+  the part of the edge that is worst.
+- Checked by script: all 12 jobs are rejected at the start and pass after the
+  cure; job 11 was completed with mouse and keys only.

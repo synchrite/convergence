@@ -130,3 +130,14 @@ Not modelled yet: warm-up drift, and a second playfield for the side view.
 Everything described here is inside the cabinet, beside lethal voltages. The
 game is the place to practise it. On a real set, use the controls outside the
 case unless you are trained.
+
+## Strip fitting on the bench (2026-11-21)
+
+The bench models fitting a strip as: choose the place round the tube nearest
+the fault, slide the strip between the front of the yoke and the funnel glass
+while watching the pattern, turn it over if the error grows, tape it when the
+corner is right. This follows general descriptions of the practice. It was not
+taken from a service manual and has not been checked by someone who has done
+the work. Known simplifications: depth has five steps, a strip acts on one
+region with a fixed falloff, and turning a strip end for end or at an angle is
+not modelled.
