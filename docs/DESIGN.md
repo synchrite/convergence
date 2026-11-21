@@ -1,6 +1,8 @@
 # Charge! Convergence: design specification
 
-Status: proposal, 2026-11-21. Nothing in sections 4 to 11 is built unless section 2
+Status: shelved, 2026-11-21. The Convergence Bench built from this specification was
+removed from the site and the DOS edition on the owner's decision (not fun, and it will
+not be developed). The text below is kept as a record. Originally: proposal, 2026-11-21. Nothing in sections 4 to 11 is built unless section 2
 says so. The game is inspired by the original *Charge!* by C. Anthony Ray (BYTE,
 December 1982).
 

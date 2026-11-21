@@ -19,34 +19,7 @@ Switches: `/BANK` (force bank switching), `/NOSOUND`, `/NOSB`, `/NOADLIB`.
 
 ## What is in it
 
-**The Convergence Bench.** The same game as the browser edition's main page:
-the same twelve jobs, the same model, the same medals. The picture is in a
-mirror on the left; on the right is the neck of the tube, from behind or from
-the side (V). It is played from the keyboard:
-
-| Key | Does |
-|---|---|
-| TAB | Change hands: a ring pair, the yoke tilt, or a strip |
-| Left, Right | Turn a ring pair; tilt the yoke; move a strip round the tube (rear view) or in and out under the yoke (side view) |
-| Up, Down | Spread or close the two tabs of a ring pair; tilt the yoke |
-| V | Rear view or side view |
-| N, S | Lay a new strip on the glass; choose the next strip |
-| F, T, X | Flip the chosen strip, tape it or untape it, peel it off |
-| M | Pattern: crosshatch, dots, red field |
-| 7, 8, 9 | Red, green and blue guns |
-| D, K, H | Degauss, lock, hint |
-| U | Un-reverse the mirror |
-| ENTER, ESC | Ship the set; back to the shelf |
-
-Differences from the browser: no mouse, so a strip is laid at 12 o'clock and
-moved round with the arrow keys, and one run of key presses on one control
-counts as one move. The help level is the level chosen in Setup. Medals are
-saved in `CONVERGE.SAV`.
-
-The two modes below are the earlier DOS game, a wider monitor service bench
-(geometry, focus, black level as well as convergence). They are kept.
-
-**Monitor service: the repair queue.** Ten customers' monitors, each with faults a real
+**Career: the repair queue.****Monitor service: the repair queue.** Ten customers' monitors, each with faults a real
 set gets. You work on a simulated 14 inch monitor with the controls a
 technician has, in four groups (TAB):
 
@@ -68,7 +41,7 @@ pass lamp on every control), Journeyman (press I to inspect, at a cost),
 Master (no lamps, no beam display). Stars and progress are saved in
 `CONVERGE.SAV`.
 
-**Monitor service: free bench.** A random set of faults.
+**Free bench.** A random set of faults.
 
 **Test patterns for your monitor.** Twelve full-screen patterns for the real CRT
 attached to the PC, at 640x480, 800x600 or 1024x768 where the card offers

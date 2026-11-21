@@ -26,3 +26,16 @@ Worth reusing elsewhere:
 Reasons it did not work, to avoid repeating them: stages were won or lost on
 exact placement with little feedback on why; difficulty came from precision,
 not from understanding; the slice view does not match what a technician sees.
+
+## convergence-bench
+
+The Convergence Bench: a mirror view of the test pattern, the neck of the tube
+from behind and from the side, ring pairs, yoke tilt and strips fitted by
+hand; twelve authored jobs with diagnosis and medals. Shelved on 2026-11-21 on
+the owner's decision: not fun, and it will not be developed. `index.html` is
+the browser page and still runs if opened directly. `dos/cbench.c` is the DOS
+port, removed from the build, with screenshots of it running.
+
+Worth reusing elsewhere: the ring-pair model (turning sets direction, spreading
+sets strength), the order of work (degauss, purity, centre, edges, lock), and
+the diagnose-before-touching question.

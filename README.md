@@ -13,9 +13,9 @@ original has its own repository and site; nothing here replaces it.
 
 | Path | What it is | Runs on |
 |---|---|---|
-| `dos/CONVERGE.EXE` | **DOS edition.** The Convergence Bench (the same twelve jobs as the main page), a wider monitor service game, and a test-pattern generator for a real monitor | DOS, 486 class PC, SVGA, AdLib / Sound Blaster |
-| `index.html` | **Convergence Bench (main page).** The real experience: the whole test pattern in a mirror, ring tabs, yoke and strips under your hands; twelve authored jobs with diagnosis and medals | Any modern browser |
-| `archive/inside-the-tube/index.html` | **Inside the tube (shelved).** Not linked from the site. The beam-path game: a slice through the tube showing why the beams part and what a ring or a strip does to them | Any modern browser |
+| `dos/CONVERGE.EXE` | **DOS edition.** A CRT service-bench game plus a test-pattern generator for a real monitor | DOS, 486 class PC, SVGA, AdLib / Sound Blaster |
+| `index.html` | Index page: links to what is below | Browser |
+| `archive/` | Shelved games: the Convergence Bench and Inside the tube. Not linked from the site; see `archive/README.md` | Browser |
 | `v2/index.html` | Physics lab: a beam steered by real electric and magnetic deflection, with lessons | Browser |
 | `classic/index.html` | Charge! Phosphor: land 16 shots evenly on a phosphor wall | Browser |
 | `original/` | The 1982 Applesoft BASIC listing running in an emulator, kept for reference | Browser |
@@ -35,7 +35,7 @@ original has its own repository and site; nothing here replaces it.
 
 ## Quick start
 
-- **Browser:** open `index.html` for the bench,. No install, no network needed.
+- **Browser:** open `index.html` and choose. No install, no network needed.
 - **DOS:** copy `dos/CONVERGE.EXE` to the PC and run `CONVERGE`. See `docs/INSTALL.md`.
 
 ## Status

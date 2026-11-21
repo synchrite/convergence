@@ -494,3 +494,15 @@ real experience of adjusting convergence.
 
 - `docs/DEVELOPMENT.md` states that the `synchrite/charge` repository is frozen:
   its link was given to the original author, so nothing is pushed there.
+
+## 2026-11-21: the Convergence Bench shelved
+
+- Owner's decision: the bench is not fun and will not be developed.
+- The browser page moved from `index.html` to `archive/convergence-bench/`.
+  The `bench/` redirect was deleted.
+- The DOS port (`cbench.c`) was taken out of the build and moved to
+  `archive/convergence-bench/dos/` with its screenshots. `CONVERGE.EXE` was
+  rebuilt with the earlier six-item menu. Save files of either version load.
+- `index.html` is now a plain index page linking the physics lab, Charge!
+  Phosphor, the 1982 original and the DOS download.
+- `docs/DESIGN.md` is marked shelved and kept as a record.
