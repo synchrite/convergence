@@ -355,3 +355,31 @@ Request: keep to one type of convergence strip, the usual one.
   and hard modes turn it, which weakens it.
 - Its strength at the beams is set by position alone in easy mode.
 - All 50 stages were re-checked in all three modes with the single strip, and pass.
+
+## 2026-11-21: the rings alone are never enough
+
+Feedback: too often a stage could be won by changing only the squeeze ring.
+
+- **Cause.** The fault parts sat near the neck, where the beams for every picture
+  pass through almost the same place. A part there bends all the pictures alike,
+  and a ring corrects exactly that kind of error, so the strips had nothing to do.
+- **Fix in the design.** On stages that have a ring, the parts now sit further
+  along the funnel and are stronger. There they act on the pictures unequally,
+  which a ring cannot undo.
+- **Fix in the checking.** `tools/find_seeds.js` now keeps a layout only if the
+  solver, given the rings and yoke but no strips, fails to fix it. It prefers
+  layouts that also cannot be fixed with one strip fewer than the level gives.
+  For each stage it reports how many layouts it threw away because the rings
+  were enough: between 0 and 25.
+- **Result.** On all 33 stages that have both parts and rings, rings alone do not
+  solve the stage (the solver could not, in two tries each). Seven of them were
+  also not solved with one strip fewer (3-7, 3-9, 3-10, 5-5, 5-8, 5-10, and
+  every level 1 stage, where one strip is all there is). On the rest, including
+  all of level 2, fewer strips than the level gives can still be enough.
+- These results come from a search that can fail to find a solution that
+  exists, so "not solvable with fewer" means the solver did not manage it, not
+  a proof.
+- The ring and yoke lesson stages (1-6, 2-5, 3-1, 4-1 to 4-6, 5-1 to 5-4) are
+  unchanged: they have no parts and are meant to be done with the adjustment alone.
+- Medium and hard use the same layouts as easy. Anything solvable with flat
+  strips is solvable when turning is also allowed.

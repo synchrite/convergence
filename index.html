@@ -139,7 +139,7 @@ function cfg(st){
 }
 const stageName=st=>{const c=cfg(st);return c.L+'-'+c.S};
 /* Seeds checked with the solver: each stage can be solved with its strips and rings. Filled by tools/find_seeds.js. */
-const SEEDS=/*SEEDS*/{"easy":[null,2,1,1,0,1,0,3,1,0,0,1,7,0,0,1,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,0],"medium":[null,2,1,1,0,1,0,3,1,0,0,1,7,0,0,1,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0],"hard":[null,2,1,1,0,1,0,3,1,0,0,1,7,0,0,1,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0]}/*END-SEEDS*/;
+const SEEDS=/*SEEDS*/{"easy": [null, 2, 1, 1, 0, 1, 0, 22, 3, 4, 30, 47, 10, 0, 9, 1, 2, 1, 0, 12, 2, 0, 4, 7, 1, 2, 3, 14, 0, 4, 7, 0, 0, 2, 0, 0, 0, 2, 10, 2, 10, 0, 0, 0, 0, 11, 1, 0, 14, 1, 15], "medium": [null, 2, 1, 1, 0, 1, 0, 22, 3, 4, 30, 47, 10, 0, 9, 1, 2, 1, 0, 12, 2, 0, 4, 7, 1, 2, 3, 14, 0, 4, 7, 0, 0, 2, 0, 0, 0, 2, 10, 2, 10, 0, 0, 0, 0, 11, 1, 0, 14, 1, 15], "hard": [null, 2, 1, 1, 0, 1, 0, 22, 3, 4, 30, 47, 10, 0, 9, 1, 2, 1, 0, 12, 2, 0, 4, 7, 1, 2, 3, 14, 0, 4, 7, 0, 0, 2, 0, 0, 0, 2, 10, 2, 10, 0, 0, 0, 0, 11, 1, 0, 14, 1, 15]}/*END-SEEDS*/;
 const RINGN={sq:'SQUEEZE',sh:'SHIFT',pu:'PURITY',sl:'YOKE SLIDE',ti:'YOKE TILT',sqd:'SQUEEZE DIR',shd:'SHIFT DIR'},KR=0.006,CG2=14,Z=()=>({sq:0,sh:0,pu:0,sl:0,ti:0});
 /* Yoke: sliding it along the neck changes where the beams land at the edges of the screen (purity there);
    tilting it makes red and blue cross opposite ways at the two edges (dynamic convergence). Neither changes the centre.
@@ -212,7 +212,11 @@ function genLevel(st,tForce){
     const r=mulberry(st*977+13+t*7919);ions=[];
     // placement after lines 2080 to 2110 of the 1982 listing (odd x, even y, signs alternate, + first);
     // early stages keep the parts near the neck, where the beams are far apart and so are bent unequally
-    for(let i=0;i<c.n;i++)ions.push({x:2*Math.floor(r()*(c.L===1?22:c.L===2?60:105))+34,y:2*Math.floor(r()*65)+14,q:(i%2===0?1:-1)*(0.7+r()*0.9)});
+    // Where a ring is available, the parts sit further along the funnel and are stronger. A part near the neck
+    // bends every picture's beams alike, which a ring alone can undo; one further along acts on the pictures
+    // unequally, and that is what a strip is for.
+    const far=c.rings.length>0;
+    for(let i=0;i<c.n;i++)ions.push({x:far?2*Math.floor(r()*80)+70:2*Math.floor(r()*22)+34,y:2*Math.floor(r()*65)+14,q:(i%2===0?1:-1)*(far?1.4+r()*1.6:0.7+r()*0.9)});
     ions.forEach(sitePart);
     ro=Z();rod={sq:0,sh:0};for(const k of c.knock){ro[k]=(r()<.5?-1:1)*(2+Math.floor(r()*4));   // a ring that has been knocked out of place
       if(DIRS&&(k==='sq'||k==='sh'))rod[k]=c.kdir[k]!=null?c.kdir[k]:Math.floor(r()*4)}        // and turned
