@@ -35,7 +35,7 @@ Level 5 brings in the second direction through the rings; see below.
 - **Strips go on the glass.** A convergence strip is a small magnet stuck to the
   outside of the funnel, between the yoke and the screen. It is slid along the
   glass while the picture is watched, flipped to change which pole faces the
-  tube, trimmed shorter to weaken it, and left stuck down. The game's strips
+  tube, and left stuck down. The game has one kind of strip, of one size. The game's strips
   work the same way, on the top or bottom glass of the slice.
 - **A strip acts most on the nearest beam.** Its pull dies away quickly with
   distance. On the top glass it moves red most, on the bottom glass blue. Near

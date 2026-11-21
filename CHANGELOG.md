@@ -342,3 +342,16 @@ Feedback: make placing convergence strips more fun and more realistic.
 - Purity is now a matter for the purity ring and the yoke only, as on a real set.
 - All 50 stages were re-checked in all three modes with the new strips. The
   tutorial and stage 1-1 to 1-3 texts teach the new handling.
+
+## 2026-11-21: one standard strip
+
+Request: keep to one type of convergence strip, the usual one.
+
+- There is now exactly one strip, always the same size. Trimming to three lengths
+  is removed (the 1 2 3 keys, the mouse wheel and the Trim button no longer act
+  on strips).
+- What is left is what is done to that one strip: slide it along the top or bottom
+  glass, flip it over (pull or push), press it on, peel it off, and in medium
+  and hard modes turn it, which weakens it.
+- Its strength at the beams is set by position alone in easy mode.
+- All 50 stages were re-checked in all three modes with the single strip, and pass.

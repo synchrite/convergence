@@ -31,7 +31,7 @@ button[aria-pressed=true]{background:#14301f;border-color:var(--acc)}
   <button id="bRot" title="Turn the strip on the glass so less of its field reaches the beams (R, or right click). Medium and hard modes.">Turn</button>
   <button id="bPol" title="Flip the strip over: one face pulls the beams, the other pushes them (P)">Flip</button>
   <button id="bKind" style="display:none">-</button>
-  <button id="bStr" title="Trim the strip: three lengths, shorter is weaker (1, 2, 3 or the mouse wheel)">Trim</button>
+  <button id="bStr" style="display:none">-</button>
   <button id="bUndo" title="Take back the last strip (U)">Undo</button>
   <button id="bClear" title="Remove all strips (C)">Clear</button>
   <button id="bDeg" title="Demagnetise the shadow mask (D). Always the first step.">Degauss</button>
@@ -48,7 +48,7 @@ button[aria-pressed=true]{background:#14301f;border-color:var(--acc)}
   <button id="bMus" aria-pressed="true" title="Music on or off">Music</button>
 </div>
 <div id="msg" role="status"></div>
-<p class="keys"><b>Playing.</b> Work by measurement, not by trial. GAP at the bottom left is how far apart red and blue land for the marked picture; OFF is how far their middle sits from green; LAND, on later levels, is how far all three sit from the white mark. A strip is a small magnet that sticks to the outside of the glass, top or bottom, between the yoke and the screen. Move the pointer along the glass and the strip rides under it, already bending the beams. The row of numbers across the top shows how much it would change the gap at each place: stick it where the number cancels the gap. Click to press it on, drag to slide it, click it to peel it off. P flips it (one face pulls, the other pushes), 1 2 3 or the mouse wheel trim it (shorter is weaker), and in medium and hard modes R turns it for finer strength. Rings (from stage 1-6) and, from level 4, the yoke: click &lt; and &gt; in the box, or Z and X, V for the next one; one click moves the beams 1.5. From level 4, D degausses, M changes the mirror between dots, a crosshatch and a red field, K wedges the yoke and seals the rings, and 7 8 9 switch the red, green and blue guns. Tab next picture, U undo, C clear, A auto-place, N next stage, F filter.</p>
+<p class="keys"><b>Playing.</b> Work by measurement, not by trial. GAP at the bottom left is how far apart red and blue land for the marked picture; OFF is how far their middle sits from green; LAND, on later levels, is how far all three sit from the white mark. A strip is a small magnet that sticks to the outside of the glass, top or bottom, between the yoke and the screen. Move the pointer along the glass and the strip rides under it, already bending the beams. The row of numbers across the top shows how much it would change the gap at each place: stick it where the number cancels the gap. Click to press it on, drag to slide it, click it to peel it off. There is one kind of strip, always the same size. P flips it (one face pulls, the other pushes), and in medium and hard modes R turns it, which weakens it. Rings (from stage 1-6) and, from level 4, the yoke: click &lt; and &gt; in the box, or Z and X, V for the next one; one click moves the beams 1.5. From level 4, D degausses, M changes the mirror between dots, a crosshatch and a red field, K wedges the yoke and seals the rings, and 7 8 9 switch the red, green and blue guns. Tab next picture, U undo, C clear, A auto-place, N next stage, F filter.</p>
 <p class="keys"><b>What you are looking at.</b> The big view is the set from behind and to one side: the electron gun and neck on the left with its coloured ring magnets, the copper deflection yoke, the glass funnel widening to the faceplate on the right, and the chassis below. On the far right is the mirror: it shows the front of the screen, reversed, which is how convergence is really done, because the adjustments are at the back and the picture is at the front. Each character is drawn three times, once by each beam; apart, you see three coloured ghosts, together one white character that dances.</p>
 <p class="keys"><b>Why the picture is wrong.</b> The small parts marked + and - on the glass are the real causes of misconvergence: an uneven winding in the yoke, a magnetised bracket or shield, a loudspeaker magnet. + pulls the beams toward it and - pushes them away (the marks are a nod to the charges of the 1982 game). They bend the near beam more than the far one, so the three land apart. You cannot remove them; you cancel them.</p>
 <p class="keys"><b>The rules a technician uses, and you can too.</b> 1. A ring on the neck changes every picture by the same amount: set the rings first, on the middle picture. Squeeze moves red and blue opposite ways, shift moves them together, purity moves all three. 2. A strip acts most on the beam nearest to it, and its pull dies away quickly with distance: strips are for what the rings and yoke cannot reach, and they come last. 3. A strip near the yoke, where the glass is close to the beams, does far more than one near the screen. 4. Green never moves: it is the reference. 5. The real order of work, which level 4 follows: degauss; purity on a red field (purity ring for the centre, slide the yoke for the edges); convergence on dots (rings for the centre, tilt the yoke for the edges); strips only for what is left. </p>
@@ -139,7 +139,7 @@ function cfg(st){
 }
 const stageName=st=>{const c=cfg(st);return c.L+'-'+c.S};
 /* Seeds checked with the solver: each stage can be solved with its strips and rings. Filled by tools/find_seeds.js. */
-const SEEDS=/*SEEDS*/{"easy":[null,2,1,1,0,1,0,3,1,0,0,1,7,0,0,1,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0],"medium":[null,2,1,1,0,1,0,3,1,0,0,1,7,0,0,1,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,0],"hard":[null,2,1,1,0,1,0,3,1,0,0,1,7,0,0,1,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0]}/*END-SEEDS*/;
+const SEEDS=/*SEEDS*/{"easy":[null,2,1,1,0,1,0,3,1,0,0,1,7,0,0,1,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,0],"medium":[null,2,1,1,0,1,0,3,1,0,0,1,7,0,0,1,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0],"hard":[null,2,1,1,0,1,0,3,1,0,0,1,7,0,0,1,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0]}/*END-SEEDS*/;
 const RINGN={sq:'SQUEEZE',sh:'SHIFT',pu:'PURITY',sl:'YOKE SLIDE',ti:'YOKE TILT',sqd:'SQUEEZE DIR',shd:'SHIFT DIR'},KR=0.006,CG2=14,Z=()=>({sq:0,sh:0,pu:0,sl:0,ti:0});
 /* Yoke: sliding it along the neck changes where the beams land at the edges of the screen (purity there);
    tilting it makes red and blue cross opposite ways at the two edges (dynamic convergence). Neither changes the centre.
@@ -158,9 +158,9 @@ let guns=[true,true,true],locked=false,unlocks=0,needLock=false;
 /* Modes. Easy: a strip always stands upright across the beams and no stage needs anything else.
    Medium: a strip can also be laid along the beams (a quarter turn). Hard: all four angles.
    Each mode has its own checked layouts, found with the solver held to that mode's angles. */
-/* A convergence strip is a small magnet stuck to the outside of the funnel glass, as on a real set. It is
-   slid along the glass, flipped (which pole faces the tube: pull or push), trimmed (three lengths) and,
-   in the harder modes, turned so that less of its field points into the tube (finer steps of strength).
+/* A convergence strip is a small magnet stuck to the outside of the funnel glass, as on a real set. There is one
+   kind, always the same size. It is slid along the glass, flipped (which pole faces the tube: pull or push)
+   and, in the harder modes, turned so that less of its field points into the tube.
    Its field reaches the beams from the glass and falls off with distance squared, like the fault parts'. */
 const ROTS={easy:[0],medium:[0,2],hard:[0,1,2]},MODES=['easy','medium','hard'],TF=[1,.7,.4],QS=1,HL=[5,9,13];
 const railY=(x,side)=>Math.round(80+side*(tubeH(x)+3));
@@ -171,7 +171,7 @@ let RINGS=[],rv={sq:0,sh:0,pu:0,sl:0,ti:0},ro={sq:0,sh:0,pu:0,sl:0,ti:0},ringSel
 let ions=[],strips=[],seed=1,level=1,tool={rot:0,pol:-1,len:2,side:-1},cursor=null,passed=false,usedAuto=false,msg='';
 const mulberry=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
 /* ---------- tutorial: level 0, six small steps in plain words ---------- */
-const TUT=[["A TV MAKES ITS PICTURE WITH 3 BEAMS:", "RED, GREEN AND BLUE. THEY FLY FROM THE", "BACK OF THE TV (LEFT) TO THE SCREEN."], ["WHEN ALL 3 BEAMS HIT THE SAME SPOT YOU", "SEE WHITE. LOOK AT THE MIRROR ON THE", "RIGHT: ONE WHITE ALIEN. THAT IS GOOD."], ["A METAL PART BY THE TUBE IS MAGNETISED", "(+). IT BENDS THE BEAMS SO THEY MISS.", "THE ALIEN BREAKS INTO 3 COLOURS. BAD!"], ["YOU FIX IT WITH A STRIP: A SMALL MAGNET", "YOU STICK ON THE GLASS OF THE TUBE.", "CLICK ON THE GLASS EDGE TO STICK ONE ON."], ["SLIDE IT ALONG THE GLASS. GAP (BOTTOM", "LEFT) IS HOW FAR APART THEY LAND. THE", "TOP ROW SHOWS A STRIP'S EFFECT. P FLIPS"], ["YOU FIXED THE TV! EVERY LEVEL IS LIKE", "THIS: MEASURE THE GAP, THEN STICK, SLIDE,", "FLIP AND TRIM STRIPS UNTIL IT IS WHITE."]],TUTN=TUT.length;
+const TUT=[["A TV MAKES ITS PICTURE WITH 3 BEAMS:", "RED, GREEN AND BLUE. THEY FLY FROM THE", "BACK OF THE TV (LEFT) TO THE SCREEN."], ["WHEN ALL 3 BEAMS HIT THE SAME SPOT YOU", "SEE WHITE. LOOK AT THE MIRROR ON THE", "RIGHT: ONE WHITE ALIEN. THAT IS GOOD."], ["A METAL PART BY THE TUBE IS MAGNETISED", "(+). IT BENDS THE BEAMS SO THEY MISS.", "THE ALIEN BREAKS INTO 3 COLOURS. BAD!"], ["YOU FIX IT WITH A STRIP: A SMALL MAGNET", "YOU STICK ON THE GLASS OF THE TUBE.", "CLICK ON THE GLASS EDGE TO STICK ONE ON."], ["SLIDE IT ALONG THE GLASS. GAP (BOTTOM", "LEFT) IS HOW FAR APART THEY LAND. THE", "TOP ROW SHOWS A STRIP'S EFFECT. P FLIPS"], ["YOU FIXED THE TV! EVERY LEVEL IS LIKE", "THIS: MEASURE THE GAP, THEN STICK, SLIDE", "AND FLIP A STRIP UNTIL IT IS WHITE."]],TUTN=TUT.length;
 let tut=0,tutIon=[];
 const tutTask=()=>tut===3||tut===4;                     // steps that end when the player does something
 function tutSet(n){
@@ -326,7 +326,7 @@ async function autoPlace(K,live){
   searching=true;mask=false;locked=false;guns=[true,true,true];
   const rnd=Math.random,RA=()=>ROTS[mode][Math.floor(rnd()*ROTS[mode].length)],
     SN=s=>{const q=placeAt({x:s.x,side:s.side});s.x=q.x;s.y=q.y;s.bad=q.blocked;return s},
-    P=()=>{for(let t=0;t<20;t++){const s=SN({x:64+rnd()*172,side:rnd()<.5?-1:1,rot:RA(),pol:rnd()<.5?-1:1,len:1+Math.floor(rnd()*3)});if(!s.bad)return s}return SN({x:150,side:-1,rot:0,pol:1,len:1})};
+    P=()=>{for(let t=0;t<20;t++){const s=SN({x:64+rnd()*172,side:rnd()<.5?-1:1,rot:RA(),pol:rnd()<.5?-1:1,len:2});if(!s.bad)return s}return SN({x:150,side:-1,rot:0,pol:1,len:2})};
   const RK=RINGS.filter(k=>k.length===2);let curD={...rd},bestD={...rd};
   let cur=Array.from({length:K},P),curR={...rv};strips=cur;let c=evaluate().cost,best=cur.map(s=>({...s})),bestR={...rv},bc=c;
   const iters=9000;
@@ -339,8 +339,7 @@ async function autoPlace(K,live){
       if(m<.5){s.x+=(rnd()-.5)*Math.max(j,10);SN(s)}
       else if(m<.62&&!refine){s.side=-s.side;SN(s)}
       else if(m<.74&&!refine)s.pol*=-1;
-      else if(m<.9)s.len=1+Math.floor(rnd()*3);
-      else if(m<.96&&!refine)s.rot=RA();
+      else if(m<.92&&!refine)s.rot=RA();
       else if(!refine)cand[i]=P();
       if(cand[i].bad)continue;}
     strips=cand;rv=candR;rd=candD;const cc=evaluate().cost;
@@ -762,7 +761,7 @@ function place(p){
   if(q.blocked){sfx.lose();say('There is a part fixed to the glass there. The strip has to go beside it.');return}
   strips.push({...q,rot:tool.rot,pol:tool.pol,len:tool.len});
   sfx.place();beep(70,.09,'sine',.2);burst(FX0+q.x,FY0+q.y,8,[.9,.9,.8]);
-  say('Pressed onto the glass. Slide it along the glass by dragging. P flips it, 1 2 3 or the wheel trims it'+(ROTS[mode].length>1&&level>0?', R turns it':'')+'. Click it to peel it off.');
+  say('Pressed onto the glass. Slide it along the glass by dragging. P flips it'+(ROTS[mode].length>1&&level>0?', R turns it':'')+'. Click it to peel it off.');
 }
 function panelRow(p){ // p in field coordinates; the test column is right of the tube
   const X=p.x+FX0,Y=p.y+FY0,n=AIMS.length,y0=38+(5-n)*14;
@@ -785,12 +784,12 @@ cv.addEventListener('pointerdown',e=>{
 });
 cv.addEventListener('pointerup',()=>{if(drag){if(!drag.moved){const z=strips[drag.i];strips.splice(drag.i,1);sfx.remove();burst(FX0+z.x,FY0+z.y,5,[.8,.8,.7]);say('Peeled off, back on the sheet.')}drag=null}});
 cv.addEventListener('contextmenu',e=>{e.preventDefault();rotate()});
-cv.addEventListener('wheel',e=>{const rg=cursor&&ringAt(cursor);if(rg&&rg.k){ringTurn(rg.k,e.deltaY<0?1:-1);e.preventDefault();return}const h=under();const cur=h>=0?strips[h].len:tool.len,n=Math.max(1,Math.min(3,cur+(e.deltaY<0?1:-1)));if(n!==cur)str(n);e.preventDefault()},{passive:false});
+cv.addEventListener('wheel',e=>{const rg=cursor&&ringAt(cursor);if(rg&&rg.k){ringTurn(rg.k,e.deltaY<0?1:-1);e.preventDefault();return}e.preventDefault()},{passive:false});
 const say=t=>{msg=t;$('msg').textContent=t};
 const under=()=>cursor?hit(cursor):-1;   // tool keys act on the strip under the cursor, if any
 function rotate(){
   const R=level===0?[0]:ROTS[mode];
-  if(R.length===1){say('Easy mode: a strip lies flat on the glass. Slide it, flip it (P) and trim it (1 2 3). Medium mode lets you turn it for finer strength.');return}
+  if(R.length===1){say('Easy mode: a strip lies flat on the glass. Slide it and flip it (P). Medium mode lets you turn it, which weakens it.');return}
   sfx.turn();const nx=r=>R[(R.indexOf(r)+1)%R.length],h=under();
   if(h>=0){const s=strips[h];s.rot=nx(R.includes(s.rot)?s.rot:R[0]);tool.rot=s.rot}else tool.rot=nx(R.includes(tool.rot)?tool.rot:R[0]);
   say(['Flat on the glass: full strength.','Turned 45 degrees: about seven tenths of its strength reaches the beams.','Turned a quarter turn: about four tenths of its strength reaches the beams.'][h>=0?strips[h].rot:tool.rot]);
@@ -804,7 +803,7 @@ function setMode(m){
 }
 function pol(){sfx.turn();beep(500,.06,'triangle',.05,0,900);const h=under();if(h>=0){strips[h].pol*=-1;tool.pol=strips[h].pol}else tool.pol*=-1;say((h>=0?strips[h].pol:tool.pol)>0?'Flipped: this face PULLS the beams toward the strip (+).':'Flipped: this face PUSHES the beams away from the strip (-).');sync()}
 function kind(){}
-function str(n){const h=under(),cur=h>=0?strips[h].len:tool.len,v=n||(cur%3)+1;if(v<cur){beep(2400,.03,'square',.05);beep(1800,.03,'square',.05,.05);const z=h>=0?strips[h]:null;if(z)burst(FX0+z.x,FY0+z.y,4,[.9,.9,.9])}else sfx.turn();
+function str(n){return;const h=under(),cur=h>=0?strips[h].len:tool.len,v=n||(cur%3)+1;if(v<cur){beep(2400,.03,'square',.05);beep(1800,.03,'square',.05,.05);const z=h>=0?strips[h]:null;if(z)burst(FX0+z.x,FY0+z.y,4,[.9,.9,.9])}else sfx.turn();
   if(h>=0){strips[h].len=v;tool.len=v}else tool.len=v;say('Strip length '+v+' of 3. A shorter strip is a weaker magnet.');sync()}
 function undo(){strips.pop();say('Last strip peeled off.')}
 function clear(){strips=[];rv=Z();usedAuto=false;say('Strips removed and rings set back to zero.')}
@@ -823,7 +822,7 @@ function intro(){
   const c=cfg(level),t={
    '1-1':'Measure, then act. GAP at the bottom left is how far apart red and blue land. A strip is a small magnet you stick on the outside of the glass. Move the pointer along the top or bottom glass: the row of numbers across the top shows how much this strip would change the gap at each place. Stick it where the number cancels the gap. P flips it over, which turns a pull into a push.',
    '1-2':'The same method. A strip on the top glass acts most on the red beam, which runs nearest to it; one on the bottom glass acts most on blue. Near the yoke the glass is close to the beams and a strip does a lot; near the screen it does very little.',
-   '1-3':'If no place gives the number you need, trim the strip (1, 2 or 3, or the mouse wheel): a shorter strip is a weaker magnet. The label on the strip gives its exact effect.',
+   '1-3':'There is one kind of strip and it is always the same size. Its strength at the beams is set by where you put it: which glass, and how far along. The label on the strip gives its exact effect.',
    '1-4':'Tighter now: the three colours must land closer together. The green mark on the APART bar is the limit.',
    '1-6':'New: the SQUEEZE RING on the neck has been knocked. A ring changes EVERY picture by the same amount. Click < or > in the RINGS box (or Z and X). No strip is needed here.',
    '1-7':'Two pictures. Do what a technician does: set the ring first so the pictures are as good as it can make them, then use your one strip, near the screen, on the picture that is still wrong.',
@@ -847,7 +846,6 @@ function intro(){
 function saveStars(n){if(!level)return;const key='conv-stars-'+mode;try{const b=JSON.parse(localStorage.getItem(key)||'{}');if(!(b[level]>=n)){b[level]=n;localStorage.setItem(key,JSON.stringify(b))}}catch(e){}}
 function sync(){
   $('bPol').textContent='Flip: '+(tool.pol>0?'pulls (+)':'pushes (-)');
-  $('bStr').textContent='Trim: length '+tool.len;
   $('bRot').textContent='Turn'+(tool.rot?(tool.rot===1?': 45':': 90'):'');
   [0,1,2].forEach(i=>$('bG'+i).setAttribute('aria-pressed',guns[i]));
   $('bMode').textContent='Mode: '+mode;$('bRot').disabled=mode==='easy'||level===0;
@@ -867,7 +865,7 @@ window.addEventListener('keydown',e=>{
   if(k==='enter'&&level===0&&document.activeElement.tagName!=='BUTTON'){tutNext();return}
   if(k==='enter'&&passed&&document.activeElement.tagName!=='BUTTON'){go(level+1);return}
   if(k==='r')rotate();else if(k==='p')pol();else if(k==='t')kind();else if(k==='s')str();
-  else if(k==='1'||k==='2'||k==='3')str(+k);
+
   else if(k==='u')undo();else if(k==='c')clear();else if(k==='a')auto();else if(k==='n')go(level+1);
   else if(k==='f')$('bCrt').click();
   else if(k==='m')patNext();
