@@ -1,12 +1,12 @@
 // Find, for each of the 50 stages, a layout that starts visibly broken and that the solver can fix
-// with that stage's strips and rings. Writes the seed table into index.html between the SEEDS markers.
+// with that stage's strips and rings. Writes the seed table into inside/index.html between the SEEDS markers.
 // Run: node tools/find_seeds.js easy|medium|hard   (needs Playwright with Chromium)
 // Each mode holds the solver to that mode's strip angles, so no stage needs a turn the mode does not allow.
 // A layout is kept only if it can be solved with the stage's strips AND cannot be solved with one strip fewer,
 // so the rings alone are never enough where strips are provided.
 const {chromium}=require('playwright'),fs=require('fs'),path=require('path');
 (async()=>{
-  const file=path.resolve(__dirname,'..','index.html');
+  const file=path.resolve(__dirname,'..','inside','index.html');
   const b=await chromium.launch();const p=await b.newPage();
   p.on('pageerror',e=>console.log('PAGE ERROR',e.message));
   await p.goto('file://'+file+'#level-1');await p.waitForTimeout(300);

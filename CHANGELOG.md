@@ -453,3 +453,12 @@ real experience of adjusting convergence.
   the part of the edge that is worst.
 - Checked by script: all 12 jobs are rejected at the start and pass after the
   cure; job 11 was completed with mouse and keys only.
+
+## 2026-11-21: the bench is the main page
+
+- The Convergence Bench moved from `bench/index.html` to `index.html`. The old
+  address redirects.
+- The beam-path game moved from `index.html` to `inside/index.html`. Its title
+  screen and music stay with it. `tools/find_seeds.js` and
+  `tools/paint_title.py` write to the new path.
+- Links, README and docs updated to match.

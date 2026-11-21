@@ -45,10 +45,10 @@ That instruction changes the main view. A technician does not see beam paths.
 They stand behind the set, watch the whole test pattern in a mirror, and turn
 ring tabs by hand. So:
 
-- The main game is the **Convergence Bench** (`bench/index.html`): the full
+- The main game is the **Convergence Bench** (`index.html`, the main page): the full
   picture in the mirror, and a rear view of the neck with the three ring pairs,
   the yoke and eight places for a strip on the glass.
-- The beam-path game (`index.html`) becomes **inside the tube**: the explanation
+- The beam-path game (`inside/index.html`) becomes **inside the tube**: the explanation
   of why the beams part. It is chapter 1 material and an X-ray view, not the job.
 - The second direction is no longer a separate feature: the picture is two
   dimensional, and every ring has direction and strength from the start.

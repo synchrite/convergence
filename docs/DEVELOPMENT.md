@@ -11,7 +11,7 @@ and test it, and what is still open.
 | *Charge!* 1982 (`original/`) | | One electron, ions with a 1/r force, score by where it lands |
 | Charge! Phosphor (`classic/`) | The 1982 step law and constants (speed 10, CG 25), ion placement | CRT setting, 16 bands, evenness, burn |
 | Physics lab (`v2/`) | The goal of even coverage | Real units, Lorentz force, lessons |
-| Convergence, browser (`index.html`) | Ion placement, 1/r force | Three beams, strips, VGA-style display |
+| Convergence, browser (`inside/index.html`) | Ion placement, 1/r force | Three beams, strips, VGA-style display |
 | Convergence, DOS (`dos/`) | Three beams, strips, convergence as the goal | Whole-monitor alignment, real test patterns, DOS hardware |
 
 What comes from the 1982 listing in the browser editions: the velocity law of
@@ -24,7 +24,7 @@ edition shares the idea, not the code.
 Each is one HTML file: markup, CSS and script together, no build step, no
 libraries. Open the file to run it.
 
-- **`index.html`** draws into a 320x200 byte buffer of RGB332 colour indices and
+- **`inside/index.html`** draws into a 320x200 byte buffer of RGB332 colour indices and
   copies it to a canvas through a palette table. Beams are simulated in a
   256x160 field: speed 5 pixels a step, charges add `0.5*q*d/(|d|^2+36)` to the
   velocity each step, strips rotate the velocity by `0.012*strength` radians a
