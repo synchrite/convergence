@@ -172,6 +172,22 @@ static void setup_job(u32 m)
 
 /* ---------------- the bench ---------------- */
 static int sel, grp, face_dirty, panel_dirty, hints, inspects, strip_sel;
+/* Only the controls a job needs are put on the panel, in one list. grp is 0 for that list, G_STRIP for the strips. */
+static int clist[NCTL], ncl, has_strips;
+static void build_list(void)
+{
+    int i; u32 m = faultmask;
+    ncl = 0;
+    for (i = 0; i < 7; i++) if (m & (1ul << i)) clist[ncl++] = CT_HS + i;
+    if (m & F_FOCUS) clist[ncl++] = CT_FOCUS;
+    if (m & F_BRIGHT) clist[ncl++] = CT_BRIGHT;
+    if (m & F_PUR) { clist[ncl++] = CT_PURA; clist[ncl++] = CT_PURS; }
+    if (m & F_P4) { clist[ncl++] = CT_P4A; clist[ncl++] = CT_P4S; }
+    if (m & F_P6) { clist[ncl++] = CT_P6A; clist[ncl++] = CT_P6S; }
+    has_strips = (m & (F_STRIP1 | F_STRIP2 | F_STRIP3)) != 0;
+    grp = ncl ? 0 : G_STRIP; sel = ncl ? clist[0] : CT_HS; strip_sel = 0;
+}
+static int in_job(int i) { int k; if (i >= CT_ST0) return has_strips; for (k = 0; k < ncl; k++) if (clist[k] == i) return 1; return 0; }
 static u32 t_start, msg_until, inspect_until, degauss_at;
 static char msg[100];
 static const char *jobtitle;
@@ -201,12 +217,6 @@ static void corners(void)   /* round the corners of the glass */
         pset(FX + x, FY + y, C_BEIGE0 + 2); pset(FX + FW - 1 - x, FY + y, C_BEIGE0 + 2);
         pset(FX + x, FY + FH - 1 - y, C_BEIGE0 + 2); pset(FX + FW - 1 - x, FY + FH - 1 - y, C_BEIGE0 + 2);
     }
-}
-static void lamp(int x, int y, int state, const char *lbl)   /* 0 off, 1 green, 2 red */
-{
-    disc(x, y, 5, C_BLACK); disc(x, y, 4, state == 1 ? C_LEDG : state == 2 ? C_LEDR : GRAY(5));
-    if (state) pset(x - 1, y - 2, C_WHITE);
-    text8(x - 4, y + 9, lbl, GRAY(16));
 }
 static int show_lamps(void) { return diff == 0 || (diff == 1 && ms_now() < inspect_until); }
 
@@ -268,30 +278,37 @@ static void draw_panel(void)
     restore(PX, PY, PW, PH);
     panel(PX, PY, PW, PH);
     fill(PX + 4, PY + 4, PW - 8, 18, C_INK);
-    text(PX + 8, PY + 5, grpname[grp], C_AMBER);
+    text(PX + 8, PY + 5, grp == G_STRIP ? grpname[G_STRIP] : "THIS JOB'S CONTROLS", C_AMBER);
     if (grp == G_STRIP) {
         yoke_diagram(PX + PW / 2, PY + 120);
         text8(PX + 8, PY + 232, "UP/DOWN:  position", GRAY(14));
         text8(PX + 8, PY + 244, "LEFT/RIGHT: strips", GRAY(14));
+        if (ncl) text8(PX + 8, PY + 278, "TAB  OTHER CONTROLS", C_WHITE);
         sprintf(t, "AT %s", ctl[CT_ST0 + strip_sel].name + 6); text(PX + 8, PY + 262, t, C_WHITE);
     } else {
-        for (i = 0; i < NCTL; i++) if (ctl[i].grp == grp) {
-            y = PY + 30 + n * 22;
+        int k;
+        for (k = 0; k < ncl; k++) {
+            i = clist[k]; y = PY + 30 + n * 22;
             if (i == sel) { fill(PX + 4, y - 2, PW - 8, 20, rgbc(20, 40, 110)); bevel(PX + 4, y - 2, PW - 8, 20, rgbc(90, 130, 255), rgbc(10, 20, 60)); }
             text8(PX + 8, y + 4, ctl[i].name, i == sel ? C_WHITE : GRAY(16));
             slider(PX + 122, y, i);
             if (diff == 0) { fill(PX + 114, y + 5, 5, 5, ctl_ok(i) ? C_LEDG : C_LEDR); box(PX + 113, y + 4, 7, 7, C_BLACK); }
             n++;
         }
-        if (grp == G_MAG) neck_diagram(PX + PW / 2, PY + 232);
-        if (grp == G_PIC) {
-            text8(PX + 8, PY + 100, "D  DEGAUSS", C_WHITE);
-            text8(PX + 8, PY + 114, magnetized && diff == 0 ? "   mask is magnetised" : "", C_LEDR);
+        if (sel >= CT_PURA && sel <= CT_P6S && ncl <= 6) neck_diagram(PX + PW / 2, PY + 232);
+        else if (ncl <= 8) {
+            y = PY + 40 + ncl * 22;
+            text8(PX + 8, y, "D  DEGAUSS", (faultmask & F_MAGNET) ? C_WHITE : GRAY(11));
+            text8(PX + 8, y + 12, magnetized && diff == 0 ? "   mask magnetised" : "", C_LEDR);
+            if (has_strips) text8(PX + 8, y + 28, "TAB  STRIPS", C_WHITE);
         }
     }
     /* quality control lamps */
     fill(PX + 4, PY + PH - 44, PW - 8, 40, C_INK);
-    for (i = 0; i < NGRP; i++) lamp(PX + 24 + i * 38, PY + PH - 32, show_lamps() ? (grp_ok(i) ? 1 : 2) : 0, i == 0 ? "G" : i == 1 ? "P" : i == 2 ? "M" : "S");
+    if (show_lamps()) { int ok = 1; for (i = 0; i < NGRP; i++) if (!grp_ok(i)) ok = 0;
+        fill(PX + 12, PY + PH - 30, 10, 10, ok ? C_LEDG : C_LEDR); box(PX + 11, PY + PH - 31, 12, 12, C_BLACK);
+        text8(PX + 30, PY + PH - 29, ok ? "READY TO SHIP" : "NOT RIGHT YET", ok ? C_LEDG : GRAY(14)); }
+    else text8(PX + 12, PY + PH - 29, "TRUST YOUR EYES", GRAY(11));
 }
 static void draw_info(void)
 {
@@ -309,7 +326,7 @@ static void draw_info(void)
         fill(12, 453, 616, 22, rgbc(90, 20, 0)); bevel(12, 453, 616, 22, rgbc(255, 120, 40), C_BLACK);
         text8(16, 455, l1, C_SEL); if (cut < n) text8(16, 465, msg + cut + 1, C_SEL);
     }
-    else text8(16, 464, "TAB group \x18\x19 pick \x1B\x1A turn  F1-F5 pattern  D degauss  H hint  ENTER ship  ESC", GRAY(13));
+    else text8(16, 464, "\x18\x19 pick  \x1B\x1A turn  F1-F5 pattern  D degauss  H hint  ENTER ship it  ESC quit", GRAY(13));
     unclip();
 }
 static void draw_header(void)
@@ -376,7 +393,6 @@ static int confirm(const char *q)
     present();
     for (;;) { k = key_wait(); if (k == 'y' || k == 'Y' || k == K_ENTER) return 1; if (k == 'n' || k == 'N' || k == K_ESC) return 0; }
 }
-static int first_of(int g) { int i; for (i = 0; i < NCTL; i++) if (ctl[i].grp == g) return i; return 0; }
 
 /* Report card. Returns stars earned (0 = not passed). */
 static int report(int secs)
@@ -387,7 +403,7 @@ static int report(int secs)
         "\"The colours are still wrong in the middle of the screen.\"",
         "\"There are still colour fringes at the edges.\"" };
     int g, i, ok = 0, tot = 0, pass = 1, score, st = 0, y = 130; char t[90];
-    for (i = 0; i < NCTL; i++) if (grp_used(ctl[i].grp)) { tot++; if (ctl_ok(i)) ok++; }
+    for (i = 0; i < NCTL; i++) if (in_job(i)) { tot++; if (ctl_ok(i)) ok++; }
     for (g = 0; g < NGRP; g++) if (!grp_ok(g)) pass = 0;
     score = tot ? 1000 * ok / tot : 1000;
     if (secs > par) score -= (secs - par) * 2;
@@ -426,8 +442,7 @@ static int bench(const char *title, u32 mask, int partime, int startpat)
     int k, lastsec = -1; u32 lastmsg = 0;
     setup_job(mask);
     jobtitle = title; par = partime; pattern = startpat;
-    grp = 0; while (grp < NGRP - 1 && !grp_used(grp)) grp++;
-    sel = first_of(grp); strip_sel = 0; hints = inspects = 0; msg_until = 0; inspect_until = 0; degauss_at = 0;
+    build_list(); hints = inspects = 0; msg_until = 0; inspect_until = 0; degauss_at = 0;
     workshop(); bezel(); cache_bg();
     snd_song(SONG_BENCH);
     t_start = ms_now(); face_dirty = panel_dirty = 1;
@@ -441,11 +456,11 @@ static int bench(const char *title, u32 mask, int partime, int startpat)
         k = key_get();
         if (!k) { vid_vsync(); continue; }
         if (k == K_ESC) { if (confirm("Give up this job?")) return -1; face_dirty = 1; restore(0, 27, 640, 453); bezel(); }
-        else if (k == K_TAB) { grp = (grp + 1) % NGRP; sel = first_of(grp); panel_dirty = 1; snd_sfx(SFX_CLICK); }
+        else if (k == K_TAB) { if (has_strips && ncl) { grp = grp == G_STRIP ? 0 : G_STRIP; panel_dirty = 1; snd_sfx(SFX_CLICK); } }
         else if (k == K_UP || k == K_DOWN) {
             int d = k == K_UP ? -1 : 1;
             if (grp == G_STRIP) strip_sel = (strip_sel + 8 + d) % 8;
-            else { int i = sel; do { i = (i + NCTL + d) % NCTL; } while (ctl[i].grp != grp); sel = i; }
+            else if (ncl) { int i = 0; while (i < ncl && clist[i] != sel) i++; sel = clist[(i + ncl + d) % ncl]; }
             panel_dirty = 1; snd_sfx(SFX_TICK);
         }
         else if (k == K_LEFT || k == K_RIGHT || k == K_PGUP || k == K_PGDN) {
@@ -517,9 +532,9 @@ static void career(void)
 static void freebench(void)
 {
     static const u32 pool[13] = { F_HS, F_VS, F_HC, F_VC, F_TILT, F_PIN, F_TRAP, F_FOCUS, F_BRIGHT, F_MAGNET, F_PUR, F_P4, F_P6 };
-    u32 m = 0; int n = 3 + diff * 2 + rand() % 3, i;
+    u32 m = 0; int n = 1 + diff + rand() % 2, i;       /* one or two faults for an apprentice, three or four for a master */
     for (i = 0; i < n; i++) m |= pool[rand() % 13];
-    if (rand() % 3 == 0 || diff == 2) m |= F_STRIP2;
+    if (diff == 2 && rand() % 2) m |= F_STRIP1;
     bench("FREE BENCH: UNKNOWN SET", m, 90 + n * 45, PAT_HATCH);
 }
 static void setup(void)
@@ -564,7 +579,7 @@ void game_main(void)
 void game_bench(u32 *t)
 {
     int p, i; u32 t0;
-    setup_job(F_HS | F_P4 | F_PUR | F_MAGNET | F_FOCUS); jobtitle = "BENCH"; par = 60; grp = 0; sel = 0;
+    setup_job(F_HS | F_P4 | F_PUR | F_MAGNET | F_FOCUS); jobtitle = "BENCH"; par = 60; build_list();
     workshop(); bezel(); cache_bg(); pal_apply(64, 7);
     for (p = 0; p < NPAT; p++) { pattern = p; t0 = ms_now(); for (i = 0; i < 4; i++) draw_face(); t[p] = (ms_now() - t0) / 4; }
     t0 = ms_now(); for (i = 0; i < 4; i++) { draw_panel(); draw_info(); } t[5] = (ms_now() - t0) / 4;

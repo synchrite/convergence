@@ -108,7 +108,7 @@ static void seg_prep(void)
 {
     int w = blurw(), I = inten() * 2 / (w + 2), o;
     if (w > 15) w = 15;
-    seg_step = w >= 5 ? 3 : w >= 2 ? 2 : 1;      /* a wide blur is drawn with fewer, brighter lines; the dither hides the gaps */
+    seg_step = w >= 8 ? 3 : w >= 4 ? 2 : 1;      /* a wide blur is drawn with fewer, brighter lines; the dither hides the gaps */
     w -= w % seg_step; seg_w = w;
     for (o = -w; o <= w; o++) { int k = I * seg_step * (w + 1 - abs(o)) / (w + 1); seg_k[o + w] = k > 255 ? 255 : k; }
 }

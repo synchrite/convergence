@@ -108,18 +108,19 @@ const Ctl ctl[NCTL] = {
  STRIP("STRIP 6:00", "6 o'clock"), STRIP("STRIP 7:30", "7:30"), STRIP("STRIP 9:00", "9 o'clock"), STRIP("STRIP 10:30", "10:30")
 };
 
+/* One new idea per job, and never more than two controls on the panel until the last job. */
 const Job jobs[NJOB] = {
- { "PORTABLE 12 INCH", { "\"The picture is squeezed over to one side.\"", "A simple one to start. Centre it, then set the width.", "" }, F_HS | F_HC, 60, PAT_HATCH },
- { "OFFICE 14 INCH", { "\"Everything leans, and the picture is short and low.\"", "The yoke has slipped round on the neck.", "" }, F_VS | F_VC | F_TILT, 90, PAT_HATCH },
- { "DRAUGHTSMAN'S 17 INCH", { "\"Straight lines bow at the sides. My drawings look wrong.\"", "Pincushion and keystone. Get the edges straight and parallel.", "" }, F_PIN | F_TRAP | F_HS, 110, PAT_HATCH },
+ { "PORTABLE 12 INCH", { "\"The picture sits over to one side.\"", "One control. Move the picture until the margins match.", "" }, F_HC, 45, PAT_HATCH },
+ { "OFFICE 14 INCH", { "\"Everything leans.\"", "The yoke has slipped round on the neck. One control: tilt.", "" }, F_TILT, 45, PAT_HATCH },
+ { "DRAUGHTSMAN'S 17 INCH", { "\"Straight lines bow at the sides, and it is too narrow.\"", "Two controls: straighten the sides, then set the width.", "" }, F_PIN | F_HS, 90, PAT_HATCH },
  { "GAMER'S 15 INCH", { "\"Text is fuzzy and dark scenes are grey.\"", "Focus on the crosshatch, black level on the PLUGE pattern (F5).", "" }, F_FOCUS | F_BRIGHT, 90, PAT_HATCH },
- { "THE HI-FI SPEAKER", { "\"There is a purple cloud in one corner since I moved my speakers.\"", "The shadow mask is magnetised. Check a field pattern (F3, F4).", "Press D to degauss." }, F_MAGNET, 60, PAT_WHITE },
+ { "THE HI-FI SPEAKER", { "\"There is a purple cloud in one corner since I moved my speakers.\"", "The shadow mask is magnetised. Check a field pattern (F3, F4).", "Press D to degauss. Nothing else is wrong." }, F_MAGNET, 45, PAT_WHITE },
  { "MOVED HOUSE", { "\"The red is not red on one side, even after degaussing.\"", "Degauss anyway, then set the purity rings on the red field (F3).", "" }, F_MAGNET | F_PUR, 150, PAT_RED },
- { "COLOUR GHOSTS", { "\"White letters have a red shadow one side and blue the other.\"", "Static convergence: the four-pole rings.", "" }, F_P4, 150, PAT_HATCH },
+ { "COLOUR GHOSTS", { "\"White letters have a red shadow one side and blue the other.\"", "Static convergence: the four-pole rings. Spread, then turn.", "" }, F_P4, 150, PAT_HATCH },
  { "MORE GHOSTS", { "\"Now there are three of everything.\"", "Four-pole first to make magenta, then six-pole onto green.", "" }, F_P4 | F_P6, 240, PAT_DOTS },
- { "CORNER FRINGES", { "\"The middle is perfect but the corners have fringes.\"", "Dynamic convergence: place strips under the yoke.", "" }, F_STRIP2, 240, PAT_HATCH },
- { "THE WORKS", { "\"It fell off the van.\"", "Full alignment, in the right order: degauss, geometry, focus,", "black level, purity, static convergence, then the strips." },
-   F_HS | F_VC | F_TILT | F_PIN | F_FOCUS | F_BRIGHT | F_MAGNET | F_PUR | F_P4 | F_P6 | F_STRIP2, 600, PAT_HATCH }
+ { "CORNER FRINGES", { "\"The middle is perfect but one corner has fringes.\"", "One strip, at the place nearest the bad corner.", "" }, F_STRIP1, 150, PAT_HATCH },
+ { "THE WORKS", { "\"It fell off the van.\"", "Five things, in the order a technician does them: degauss, tilt,", "focus, the four-pole rings, then one strip." },
+   F_TILT | F_FOCUS | F_MAGNET | F_P4 | F_STRIP1, 420, PAT_HATCH }
 };
 
 const char *handbook[] = {
