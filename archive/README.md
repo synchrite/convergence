@@ -45,3 +45,7 @@ the diagnose-before-touching question.
 A browser prototype of the slow-motion views, in floating point. It was used
 to work out the physics and to check the integer version in the DOS program
 (`dos/src/slowmo.c`). Not published: the game is the DOS application.
+
+## slowmo-dos
+
+The slow-motion mode from the DOS program. Removed 2026-11-26 on the owner's decision. Its physics (integer Monte Carlo, yoke flight) and the redraw speed-ups it relied on are kept here.

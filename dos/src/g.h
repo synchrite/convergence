@@ -57,9 +57,6 @@ extern const char *tp_name[]; extern const char *tp_help[][6]; extern const int 
 #define F_STRIP2 16384
 #define F_STRIP3 32768
 
-/* slowmo.c: the slow-motion views inside the tube */
-void slowmo(void);
-
 /* patterns.c */
 void testpatterns(void);
 #endif

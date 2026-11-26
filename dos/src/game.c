@@ -553,7 +553,7 @@ static void setup(void)
 }
 void game_main(void)
 {
-    static const char *items[7] = { "CAREER: THE REPAIR QUEUE", "FREE BENCH", "SLOW MOTION: INSIDE THE TUBE", "TEST PATTERNS FOR YOUR MONITOR", "HANDBOOK", "SETUP", "EXIT TO DOS" };
+    static const char *items[6] = { "CAREER: THE REPAIR QUEUE", "FREE BENCH", "TEST PATTERNS FOR YOUR MONITOR", "HANDBOOK", "SETUP", "EXIT TO DOS" };
     int s = 0, f; char st[120];
     load();
     srand((unsigned)ms_now());
@@ -564,14 +564,13 @@ void game_main(void)
         cache_bg(); vid_present(); pal_fade(0, 64);
         if (!auto_mode) for (f = 24; f >= 0; f--) { logo(f * 2); present(); if (key_get()) { logo(0); break; } }
         logo(0); cache_bg();
-        s = menu(0, items, 7, s, "A learning tool and game about CRT alignment.  F12 saves a screenshot.");
-        if (s < 0 || s == 6) break;
+        s = menu(0, items, 6, s, "A learning tool and game about CRT alignment.  F12 saves a screenshot.");
+        if (s < 0 || s == 5) break;
         if (s == 0) career();
         else if (s == 1) freebench();
-        else if (s == 2) slowmo();
-        else if (s == 3) testpatterns();
-        else if (s == 4) handbook_view();
-        else if (s == 5) { menu_bg(); logo(0); setup(); }
+        else if (s == 2) testpatterns();
+        else if (s == 3) handbook_view();
+        else if (s == 4) { menu_bg(); logo(0); setup(); }
     }
     pal_fade(64, 0);
 }

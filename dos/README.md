@@ -37,29 +37,6 @@ pass lamp on every control), Journeyman (press I to inspect, at a cost),
 Master (no lamps, no beam display). Stars and progress are saved in
 `CONVERGE.SAV`.
 
-**Slow motion: inside the tube.** One trip from the cathode to the light
-leaving the screen, slowed until it can be watched. Five views (keys 1 to 5),
-each with a clock that says how far time is slowed:
-
-1. Gun: electrons leave the cathode and are accelerated to 30% of the speed of
-   light. Speed comes from the voltage fallen through, with relativity.
-2. Flight: the three beams through the yoke's field, each path an arc of radius
-   momentum / (charge x field). The spread of the beams at the mask is read out;
-   it is the misconvergence a uniform field gives.
-3. Mask: which electrons the slots pass, which stripe they reach, how much of
-   the beam only heats the mask. A stray field shows a purity fault appear.
-4. Phosphor: each electron's path through the aluminium film and the phosphor
-   by single-scattering Monte Carlo (screened Rutherford scattering, Joy-Luo
-   energy loss), then the light, on a clock a billion times slower.
-5. Atoms: a diagram of how a freed electron and hole reach an activator atom
-   and give one photon. Marked as a diagram.
-
-Keys: 1 to 5 view, Space pause, + and - speed, R G B guns, arrows and letters
-as shown on each view. The numbers are typical values for a 25 kV in-line
-slot-mask tube with P22 phosphors, not measurements of one tube. Views 1 to 4
-are calculated; what is only drawn (beam shape in the gun, tube outline, grain
-outlines) is listed in `docs/DEVELOPMENT.md`.
-
 **Free bench.** A random set of faults.
 
 **Test patterns for your monitor.** Twelve full-screen patterns for the real CRT

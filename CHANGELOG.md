@@ -546,3 +546,7 @@ real experience of adjusting convergence.
 - `tools/make_jsdos.py` now names the bundle after its contents
   (`play/converge-<id>.jsdos`) and writes that name and the build id into
   `index.html`. The DOS title screen shows the build date.
+
+## 2026-11-26: slow motion removed
+
+- Owner's decision. The mode's source moved to `archive/slowmo-dos/`; the DOS menu is back to six items.
