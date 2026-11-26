@@ -517,3 +517,23 @@ real experience of adjusting convergence.
 - Checked in headless Chromium over a local web server: the title screen
   appears, keys reach the game, a job opens, and the page makes no requests to
   other hosts. Sound was not checked. The page does not work from `file://`.
+
+## 2026-11-26: DOS edition: speed, music, simpler bench, slow motion
+
+- Owner's direction: the game is solely a true DOS application; design for a
+  486. Recorded in `docs/DEVELOPMENT.md`.
+- Speed: redraws about ten times faster (crosshatch 865 ms to 57 ms, purity
+  fields 582 to 71, PLUGE 204 to 10 on the emulated 486). `/BENCH` prints the
+  timings. Details in `docs/DEVELOPMENT.md`.
+- Music: new arrangement (intro, groove with chord stabs, a melody that comes
+  and goes, a half-time break), OPL2 rhythm voices for the drums, played from
+  the timer interrupt so the tempo no longer follows the redraws. The first mix
+  measured 46% of its energy below 60 Hz; the bass was moved up an octave and
+  the levels rebalanced.
+- Simpler service bench: one list holding only the controls a job needs, no
+  groups; jobs 1, 2 and 9 have one control; the last job has five steps instead
+  of eleven; one ready lamp; fewer faults on the free bench.
+- New mode, Slow motion: inside the tube. Five views from gun to atoms with a
+  clock showing how far time is slowed. Integer physics checked against a
+  floating-point prototype.
+- Main page: one short credit line at the foot instead of in the opening text.

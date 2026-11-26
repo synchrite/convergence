@@ -1,6 +1,7 @@
 /* Slow-motion view: tables (sm_tab.c, generated) and physics (smphys.c). Whole numbers only. */
 #ifndef SM_H
 #define SM_H
+#include <stdlib.h>
 #define SM_GN 497                       /* gun tables: one entry per 1/8 mm, 0..62 mm */
 extern const unsigned short sm_gun_v[SM_GN];    /* speed, (1/65536 mm per fs) x 4096 */
 extern const unsigned short sm_gun_ev[SM_GN];   /* energy, eV */
@@ -13,10 +14,15 @@ extern const unsigned short sm_de[3][SM_NB];    /* energy loss, eV per nm, x256 
 extern const unsigned short sm_al[3][SM_NB];    /* screening parameter, x65536 */
 extern const unsigned short sm_ln[256];         /* -ln((i+0.5)/256) x256 */
 
-/* flight: where beam g (0 red, 1 green, 2 blue) crosses the plane x = xend (mm), for a field of b100/100 mT. Result in 1/256 mm. */
-int sm_trace(int g, int b100, int xend);
-#define SM_BRHO100 53970                /* momentum / charge of a 25 keV electron, mT mm x100 */
-#define SM_XM 28636                     /* mask plane, mm x100 */
+/* flight. Position in 1/65536 mm, direction as a unit vector with 20 fraction bits. One step is half a millimetre.
+   In the yoke (40 to 100 mm from the gun) the direction turns by step * field / (momentum / charge). */
+typedef struct { int x, y, dx, dy; } SmFly;
+void sm_fly_start(SmFly *p, int g);     /* g: 0 red, 1 green, 2 blue; aimed to cross at the mask */
+void sm_fly_step(SmFly *p, int b100);   /* field in 1/100 mT */
+int  sm_trace(int g, int b100, int xend100);   /* where beam g crosses x = xend100 / 100 mm; result in 1/256 mm */
+#define SM_XM100 28636                  /* mask plane, mm x100 */
+#define SM_XS100 30000                  /* screen plane */
+#define SM_SG 360448                    /* gun spacing 5.5 mm, in 1/65536 mm */
 
 /* phosphor: one electron's path. Lengths in nm, energy in eV, time in 1/16 fs. */
 typedef struct { short x, y; unsigned short e, t; } SmPt;

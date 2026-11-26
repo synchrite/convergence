@@ -39,3 +39,9 @@ port, removed from the build, with screenshots of it running.
 Worth reusing elsewhere: the ring-pair model (turning sets direction, spreading
 sets strength), the order of work (degauss, purity, centre, edges, lock), and
 the diagnose-before-touching question.
+
+## slowmo-prototype
+
+A browser prototype of the slow-motion views, in floating point. It was used
+to work out the physics and to check the integer version in the DOS program
+(`dos/src/slowmo.c`). Not published: the game is the DOS application.

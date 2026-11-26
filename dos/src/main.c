@@ -36,9 +36,11 @@ int main(int argc, char **argv)
     }
     if (bench) {     /* time the drawing code: CONVERGE /BENCH > OUT.TXT */
         extern void game_bench(u32 *t);
-        u32 t[9]; game_bench(t);
+        extern void slowmo_bench(u32 *t);
+        u32 t[9], u[8]; game_bench(t); slowmo_bench(u);
         vid_done(); snd_done(); sys_done();
         printf("ms per frame: hatch %lu  dots %lu  red %lu  white %lu  pluge %lu  panel %lu  present(full) %lu  present(same) %lu  hatch in focus %lu\n", t[0], t[1], t[2], t[3], t[4], t[5], t[6], t[7], t[8]);
+        printf("slow motion, ms per frame: gun %lu  flight %lu  mask %lu  phosphor %lu  atoms %lu  Monte Carlo for one shot %lu\nMonte Carlo check, 600 electrons: %lu%% come back out, %lu eV left in the phosphor on average\n", u[0], u[1], u[2], u[3], u[4], u[5], u[6], u[7]);
         return 0;
     }
     game_main();
