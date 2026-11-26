@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Slow Motion CRT</title>
+<style>
+:root{--bg:#05070c;--panel:#0c1222;--line:#1f2b48;--fg:#dbe5ff;--dim:#8493b8;--acc:#6dff9a;--warn:#ffd25c}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{margin:0;color:var(--fg);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:1000px;margin:0 auto;padding:16px 16px 48px}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:18px 0 6px;color:var(--warn)}
+p{margin:0 0 10px;color:var(--dim)}a{color:var(--acc)}
+canvas{display:block;width:100%;height:auto;aspect-ratio:16/9;background:#000;border:2px solid var(--line);border-radius:8px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+button,select{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 11px;cursor:pointer}
+button:hover{border-color:var(--acc)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+button[aria-pressed=true]{background:#14301f;border-color:var(--acc)}
+label{color:var(--dim);font-size:14px;display:flex;align-items:center;gap:6px}
+input[type=range]{width:150px}
+#read{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:13px/1.6 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;min-height:5.5em}
+#about{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:10px}
+#about p{color:var(--fg);margin:0 0 6px}#about p.dim{color:var(--dim);font-size:14px}
+table{border-collapse:collapse;font-size:14px;margin:0 0 10px}td,th{padding:4px 12px 4px 0;text-align:left;vertical-align:top;color:var(--dim)}th{color:var(--fg);font-weight:600}
+</style></head><body><main>
+<h1>Slow Motion CRT</h1>
+<p>One trip through a colour picture tube, from the hot cathode to the light leaving the screen, slowed until it can be watched. The whole trip takes about 4 billionths of a second. Five views, each closer than the last. The clock in the corner says how far time is slowed in the view you are looking at.</p>
+<div class="bar" role="tablist" aria-label="Views" id="tabs"></div>
+<canvas id="c" width="960" height="540" aria-label="Animated view of electrons inside a cathode ray tube"></canvas>
+<div class="bar">
+  <button id="bPlay" aria-pressed="true">Pause</button>
+  <label>Speed <select id="spd"><option value="0.25">1/4</option><option value="0.5">1/2</option><option value="1" selected>1</option><option value="2">2</option><option value="4">4</option></select></label>
+  <button id="g0" aria-pressed="true" style="color:#ff6a5a">Red gun</button><button id="g1" aria-pressed="true" style="color:#6dff7a">Green gun</button><button id="g2" aria-pressed="true" style="color:#6a9cff">Blue gun</button>
+  <span id="extra" class="bar" style="margin:0"></span>
+</div>
+<div id="read" role="status" aria-live="off"></div>
+<div id="about"></div>
+
+<h2>What is calculated and what is drawn</h2>
+<table>
+<tr><th>View</th><th>Calculated</th><th>Drawn to help, not calculated</th></tr>
+<tr><td>1 Gun</td><td>Energy and speed of each electron from the voltage it has fallen through, with relativity. Transit time.</td><td>The shape of the beam between the electrodes. The voltage along the axis is a smooth curve between typical electrode voltages, not a field solution.</td></tr>
+<tr><td>2 Flight</td><td>Each electron's path through a uniform magnetic field: a circle of radius momentum / (charge x field). Where each beam lands.</td><td>The tube outline. A real yoke's field is shaped, not uniform, and a real screen is curved. Electrons stopped by the mask are not removed in this view.</td></tr>
+<tr><td>3 Mask</td><td>Straight-line paths from three guns through the slots to the stripes. Which electrons the mask stops, which stripe the rest reach, and the heating.</td><td>Depth is compressed about 3 times against width so the angles can be seen. Slots are shown in one direction only.</td></tr>
+<tr><td>4 Phosphor</td><td>Each electron's path in the solid, by the single-scattering Monte Carlo method used in electron microscopy (screened Rutherford scattering, Bethe energy loss as modified by Joy and Luo). Energy left in each layer. Number of photons from published efficiencies.</td><td>The grain outlines. The solid is treated as continuous. Light is drawn as straight rays; in a real screen it scatters between grains.</td></tr>
+<tr><td>5 Atoms</td><td>Nothing: this view is a diagram.</td><td>All of it. It shows the accepted sequence of events at the right sizes, with the real durations written on it.</td></tr>
+</table>
+<p>The numbers are typical textbook values for a 1980s colour television tube (25 kV, in-line guns, slot mask, P22 phosphors), not measurements of one tube. Decay times and efficiencies vary between makers and are given to one significant figure. A phosphor is a crystal, so the smallest view shows atoms in a lattice, not molecules.</p>
+<p>Never open a real set unless you are trained: it holds lethal voltages.</p>
+<p style="font-size:13px">Part of <a href="../../index.html">Charge! Convergence</a>, after <i>Charge!</i> by C. Anthony Ray (BYTE, December 1982).</p>
+</main>
+<script>
+(()=>{
+'use strict';
+const $=id=>document.getElementById(id);
+const cv=$('c'),g=cv.getContext('2d');const W=960,H=540;
+{const d=Math.min(2,window.devicePixelRatio||1);cv.width=W*d;cv.height=H*d;g.scale(d,d)}
+/* ---------- physics ---------- */
+const C=2.99792458e8,QE=1.602e-19;
+const gam=T=>1+T/511;                                   // T in keV
+const beta=T=>{const G=gam(T);return Math.sqrt(1-1/(G*G))};
+const speed=T=>beta(T)*C;                               // m/s
+const VA=25;                                            // anode voltage, kV
+const BRHO=gam(VA)*beta(VA)*511e3/C*1e6;                // momentum / charge, in mT mm (539)
+const rnd=Math.random,gauss=()=>{let s=0;for(let i=0;i<6;i++)s+=rnd();return (s-3)/0.707};
+const GC=['#ff5a4a','#5dff7a','#5a8cff'],GN=['red','green','blue'];
+const SG=5.5;                                           // gun spacing, mm
+const SY=[SG,0,-SG];                                    // red, green, blue gun positions across the neck
+function fmtT(s){const a=Math.abs(s);if(a===0)return '0';if(a<1e-12)return (s*1e15).toFixed(a<1e-14?1:0)+' fs';if(a<1e-9)return (s*1e12).toFixed(a<1e-11?1:0)+' ps';if(a<1e-6)return (s*1e9).toFixed(a<1e-8?2:1)+' ns';if(a<1e-3)return (s*1e6).toFixed(a<1e-5?1:0)+' us';return (s*1e3).toFixed(1)+' ms'}
+function big(n){if(n>=1e15)return (n/1e15).toFixed(n<1e16?1:0)+' million billion';if(n>=1e12)return (n/1e12).toFixed(n<1e13?1:0)+' thousand billion';if(n>=1e9)return (n/1e9).toFixed(n<1e10?1:0)+' billion';if(n>=1e6)return (n/1e6).toFixed(n<1e7?1:0)+' million';if(n>=100){const k=Math.pow(10,Math.floor(Math.log10(n))-1);n=Math.round(n/k)*k}return Math.round(n).toLocaleString('en')}
+/* ---------- state ---------- */
+let guns=[true,true,true],playing=true,mul=1,cur=0,simT=0;
+const S={};          // per-scene state
+function txt(s,x,y,c,size,al){g.font=(size||12)+'px ui-monospace,Menlo,Consolas,monospace';g.fillStyle=c||'#dbe5ff';g.textAlign=al||'left';g.textBaseline='top';g.fillText(s,x,y)}
+function dot(x,y,r,c){g.fillStyle=c;g.beginPath();g.arc(x,y,r,0,7);g.fill()}
+function scaleBar(px,label){const x=W-24-px,y=H-22;g.strokeStyle='#dbe5ff';g.lineWidth=2;g.beginPath();g.moveTo(x,y-4);g.lineTo(x,y);g.lineTo(x+px,y);g.lineTo(x+px,y-4);g.stroke();txt(label,x+px/2,y-18,'#dbe5ff',12,'center')}
+const slider=(id,label,min,max,step,val)=>'<label>'+label+' <input type="range" id="'+id+'" min="'+min+'" max="'+max+'" step="'+step+'" value="'+val+'"></label>';
+
+/* =================== 1. the gun =================== */
+const VN=[[0,0],[1,0.010],[3,0.6],[6,7],[26,7],[31,25],[62,25]];        // mm, kV on the axis
+const WN=[[0,0.30],[1.6,0],[6,-0.6],[25,-1.5],[45,-1.1],[62,-0.9]];     // beam half-width, mm (sign change = crossover)
+const lerpN=(N,x)=>{for(let i=1;i<N.length;i++)if(x<=N[i][0]){const a=N[i-1],b=N[i];return a[1]+(b[1]-a[1])*(x-a[0])/(b[0]-a[0])}return N[N.length-1][1]};
+const gun={name:'1 Gun',perSec:0.2e-9,
+ init(){S.gp=[];S.gacc=0;S.bright=S.bright??0.7;S.gid=0},
+ controls(){return slider('sBright','Brightness (grid 1)',0,1,0.01,S.bright)},
+ bind(){$('sBright').oninput=e=>{S.bright=+e.target.value}},
+ P(x,y){return[60+x*13.6,250-y*13.6]},
+ step(dt,rdt){
+  S.gacc+=rdt*mul*26*S.bright;
+  while(S.gacc>1){S.gacc--;for(let i=0;i<3;i++)if(guns[i])S.gp.push({g:i,x:0,lat:gauss()*.5,t:0,id:S.gid++})}
+  for(const p of S.gp){let left=dt;while(left>0){const T=lerpN(VN,p.x)+1e-4,v=speed(T)*1e3,h=Math.min(left,Math.max(2e-13,0.05/v));p.x+=v*h;p.t+=h;left-=h}}
+  S.gp=S.gp.filter(p=>p.x<62);
+ },
+ draw(){
+  const P=this.P;
+  // electrodes for each gun
+  for(let i=0;i<3;i++){const y=SY[i];
+   const plate=(x0,x1,ap,c)=>{g.fillStyle=c;let a=P(x0,y+2.4),b=P(x1,y+ap);g.fillRect(a[0],a[1],b[0]-a[0],b[1]-a[1]);a=P(x0,y-ap);b=P(x1,y-2.4);g.fillRect(a[0],a[1],b[0]-a[0],b[1]-a[1])};
+   const tube=(x0,x1,c)=>{g.fillStyle=c;let a=P(x0,y+2.4),b=P(x1,y+2.1);g.fillRect(a[0],a[1],b[0]-a[0],b[1]-a[1]);a=P(x0,y-2.1);b=P(x1,y-2.4);g.fillRect(a[0],a[1],b[0]-a[0],b[1]-a[1])};
+   let a=P(-2.6,y+1.1),b=P(0,y-1.1);g.fillStyle='#b4502a';g.fillRect(a[0],a[1],b[0]-a[0],b[1]-a[1]);       // cathode
+   g.fillStyle='#ffd0a0';g.fillRect(b[0]-3,a[1],3,b[1]-a[1]);                                              // oxide coating
+   plate(0.7,1.0,0.35,'#7b8aa8');plate(2.6,3.0,0.45,'#9aa8c4');tube(5,26,'#8a97b4');plate(5,5.4,0.9,'#8a97b4');tube(29,50,'#c3cde4');plate(29,29.4,1.6,'#c3cde4');
+   g.globalAlpha=.5;txt(GN[i]+' gun',P(-4.4,0)[0],P(0,y)[1]-6,GC[i],11,'right');g.globalAlpha=1}
+  const lab=(x,s1,s2)=>{const p=P(x,9.3);txt(s1,p[0],p[1],'#dbe5ff',11,'center');txt(s2,p[0],p[1]+13,'#ffd25c',11,'center')};
+  {const r=(x,row,s)=>{const p=P(x,9.3);txt(s,p[0],p[1]-18-row*15,'#dbe5ff',11,'center');g.strokeStyle='#3a4664';g.lineWidth=1;g.beginPath();g.moveTo(p[0],p[1]-6-row*15);g.lineTo(p[0],p[1]+24);g.stroke()};r(-1.3,2,'cathode, 0 V');r(0.85,1,'grid 1, '+Math.round(-5-(1-S.bright)*60)+' V');r(2.8,0,'grid 2, +600 V')}lab(15,'focus electrode','+7,000 V');lab(40,'final anode','+25,000 V');
+  // electrons
+  g.globalCompositeOperation='lighter';
+  for(const p of S.gp){const q=P(p.x,SY[p.g]+p.lat*lerpN(WN,p.x));dot(q[0],q[1],2.2,GC[p.g])}
+  g.globalCompositeOperation='source-over';
+  // one electron followed
+  const f=S.gp.find(p=>p.g===[0,1,2].find(i=>guns[i]));
+  if(f){const T=lerpN(VN,f.x)+1e-4,q=P(f.x,SY[f.g]+f.lat*lerpN(WN,f.x));g.strokeStyle='#fff';g.lineWidth=1;g.beginPath();g.arc(q[0],q[1],6,0,7);g.stroke();
+   S.follow='Followed electron: '+(T<1?(T*1000).toFixed(T<.1?1:0)+' eV':T.toFixed(1)+' keV')+', '+Math.round(speed(T)/1000).toLocaleString('en')+' km/s ('+(beta(T)*100).toFixed(1)+'% of light), '+fmtT(f.t)+' after leaving the cathode'}else S.follow='';
+  // speed against distance
+  const y0=470,y1=520;g.strokeStyle='#1f2b48';g.lineWidth=1;g.strokeRect(P(0,0)[0],y0,P(62,0)[0]-P(0,0)[0],y1-y0);
+  g.strokeStyle='#ffd25c';g.lineWidth=2;g.beginPath();for(let x=0;x<=62;x+=.25){const px=P(x,0)[0],py=y1-(y1-y0)*beta(lerpN(VN,x)+1e-4)/0.32;x?g.lineTo(px,py):g.moveTo(px,py)}g.stroke();
+  txt('speed, as a fraction of the speed of light (top of box = 0.32)',P(0,0)[0]+6,y0+3,'#8493b8',11);
+  scaleBar(13.6*10,'10 mm');
+ },
+ read(){const I=0.4e-3*S.bright,per=I/QE*this.perSec/(26*S.bright||1);
+  return 'Three guns side by side, seen from above. Each cathode is a nickel cap coated with barium and strontium oxide, heated to about 800 C.\n'
+   +'Beam current per gun at this brightness: about '+(I*1000).toFixed(2)+' mA = '+big(I/QE)+' electrons a second. Each dot stands for about '+big(per)+' electrons.\n'
+   +(S.follow||'(no electrons: brightness is at zero, the grid has cut the beam off)')},
+ about:'<p><b>The gun.</b> Heat shakes electrons out of the oxide coating with about a tenth of a volt of energy: they drift off at roughly 200 km/s. Grid 1 is a plate with a small hole, held negative. It pushes most of them back, and its voltage sets how many get through. That is brightness.</p><p>Each later electrode is more positive, and the electron falls toward it. After the 600 V grid it is at 5% of the speed of light. Inside the 25,000 V anode it is at 30%, and it stays at that speed all the way to the screen because nothing further pushes it forward.</p><p class="dim">Notice where the time goes. In this model the first millimetre takes longer than the remaining sixty, which is why the dots crowd at the cathode.</p>'
+};
+
+/* =================== 2. the flight =================== */
+const XM=300-0.75*300/(3*SG),XS=300,Y0=40,Y1=100;      // mask plane, screen plane, yoke region (mm)
+function trace(i,B,xEnd){let x=0,y=SY[i],a=Math.atan2(-SY[i],XM);const ds=.5;while(x<xEnd){if(x>=Y0&&x<Y1)a+=ds*B/BRHO;x+=Math.cos(a)*ds;y+=Math.sin(a)*ds;if(Math.abs(a)>1.5)break}return y-(x-xEnd)*Math.tan(a)}
+const flight={name:'2 Flight',perSec:0.5e-9,
+ init(){S.fp=[];S.facc=0;S.B=S.B??0;S.sweep=S.sweep??true;S.glow=[]},
+ controls(){return slider('sB','Yoke field',-5.1,5.1,0.05,S.B)+'<label><input type="checkbox" id="cSw"'+(S.sweep?' checked':'')+'> Sweep</label>'},
+ bind(){$('sB').oninput=e=>{S.B=+e.target.value;S.sweep=false;$('cSw').checked=false};$('cSw').onchange=e=>{S.sweep=e.target.checked}},
+ P(x,y){return[120+x*1.6,270-y*1.6]},
+ step(dt,rdt){
+  if(S.sweep){S.ph=(S.ph||0)+rdt*mul*.5;S.B=5.1*Math.sin(S.ph);const s=$('sB');if(s)s.value=S.B}
+  S.facc+=rdt*mul*22;
+  while(S.facc>1){S.facc--;for(let i=0;i<3;i++)if(guns[i])S.fp.push({g:i,x:0,y:SY[i],a:Math.atan2(-SY[i],XM),t:0})}
+  const v=speed(VA)*1e3;
+  for(const p of S.fp){let left=v*dt;p.t+=dt;while(left>0){const ds=Math.min(left,.5);if(p.x>=Y0&&p.x<Y1)p.a+=ds*S.B/BRHO;p.x+=Math.cos(p.a)*ds;p.y+=Math.sin(p.a)*ds;left-=ds}
+   if(p.x>=XS){S.glow.push({y:p.y,g:p.g,a:1});p.dead=1}}
+  S.fp=S.fp.filter(p=>!p.dead&&Math.abs(p.y)<175);
+  for(const q of S.glow)q.a-=rdt*1.2;S.glow=S.glow.filter(q=>q.a>0);
+ },
+ draw(){
+  const P=this.P;
+  // glass envelope
+  g.strokeStyle='#5c8ea0';g.lineWidth=2;g.fillStyle='#07131a';g.beginPath();
+  let p=P(-60,14.5);g.moveTo(p[0],p[1]);p=P(70,14.5);g.lineTo(p[0],p[1]);p=P(285,168);g.lineTo(p[0],p[1]);p=P(306,168);g.lineTo(p[0],p[1]);p=P(306,-168);g.lineTo(p[0],p[1]);p=P(285,-168);g.lineTo(p[0],p[1]);p=P(70,-14.5);g.lineTo(p[0],p[1]);p=P(-60,-14.5);g.lineTo(p[0],p[1]);g.closePath();g.fill();g.stroke();
+  // gun block
+  p=P(-55,9);let q=P(0,-9);g.fillStyle='#2a3348';g.fillRect(p[0],p[1],q[0]-p[0],q[1]-p[1]);
+  // yoke and its field
+  for(const sg of[-1,1]){g.fillStyle='#c87832';g.beginPath();let a=P(Y0,sg*16);g.moveTo(a[0],a[1]);a=P(Y1-25,sg*16);g.lineTo(a[0],a[1]);a=P(Y1+12,sg*44);g.lineTo(a[0],a[1]);a=P(Y1+12,sg*66);g.lineTo(a[0],a[1]);a=P(Y0,sg*36);g.lineTo(a[0],a[1]);g.closePath();g.fill()}
+  const k=Math.abs(S.B)/5.1;p=P(Y0,14);q=P(Y1,-14);g.fillStyle='rgba(255,210,92,'+(.08+.3*k)+')';g.fillRect(p[0],p[1],q[0]-p[0],q[1]-p[1]);
+  for(let x=Y0+10;x<Y1;x+=20)for(const y of[-7,7]){const c=P(x,y);g.strokeStyle='rgba(255,210,92,'+(.3+.7*k)+')';g.lineWidth=1;g.beginPath();g.arc(c[0],c[1],4,0,7);g.stroke();if(S.B>=0)dot(c[0],c[1],1.3,g.strokeStyle);else{g.beginPath();g.moveTo(c[0]-3,c[1]-3);g.lineTo(c[0]+3,c[1]+3);g.moveTo(c[0]+3,c[1]-3);g.lineTo(c[0]-3,c[1]+3);g.stroke()}}
+  // mask and screen
+  g.setLineDash([3,3]);g.strokeStyle='#8a94a8';g.lineWidth=1;p=P(XM,160);q=P(XM,-160);g.beginPath();g.moveTo(p[0],p[1]);g.lineTo(q[0],q[1]);g.stroke();g.setLineDash([]);
+  p=P(XS,160);q=P(XS,-160);g.strokeStyle='#dbe5ff';g.lineWidth=3;g.beginPath();g.moveTo(p[0],p[1]);g.lineTo(q[0],q[1]);g.stroke();
+  txt('gun',P(-28,0)[0],P(0,-13)[1],'#8493b8',11,'center');txt('deflection yoke',P(72,0)[0],P(0,74)[1],'#c87832',11,'center');txt('mask',P(XM,0)[0]-6,22,'#8a94a8',11,'right');txt('screen',P(XS,0)[0]-6,36,'#dbe5ff',11,'right');
+  // predicted paths, faint
+  for(let i=0;i<3;i++){if(!guns[i])continue;g.strokeStyle=GC[i];g.globalAlpha=.25;g.lineWidth=1;g.beginPath();let x=0,y=SY[i],a=Math.atan2(-SY[i],XM);p=P(x,y);g.moveTo(p[0],p[1]);while(x<XS&&Math.abs(y)<170){if(x>=Y0&&x<Y1)a+=S.B/BRHO;x+=Math.cos(a);y+=Math.sin(a);p=P(x,y);g.lineTo(p[0],p[1])}g.stroke();g.globalAlpha=1}
+  g.globalCompositeOperation='lighter';
+  for(const e of S.fp){p=P(e.x,e.y);dot(p[0],p[1],2.4,GC[e.g])}
+  for(const e of S.glow){p=P(XS,e.y);g.globalAlpha=e.a;dot(p[0]+3,p[1],5,GC[e.g]);g.globalAlpha=1}
+  g.globalCompositeOperation='source-over';
+  // side panel
+  const x=640;let y=40;const L=(s,c)=>{txt(s,x,y,c||'#dbe5ff',12);y+=17};
+  L('Top view of a 20 inch tube','#ffd25c');L('Speed: '+Math.round(speed(VA)/1000).toLocaleString('en')+' km/s');L('  = '+(beta(VA)*100).toFixed(1)+'% of the speed of light');L('Gun to screen: '+fmtT(0.3/speed(VA)));y+=8;
+  L('Yoke field: '+S.B.toFixed(2)+' mT','#ffd25c');L(Math.abs(S.B)<.02?'Path in the field: straight':'Path in the field: an arc of');if(Math.abs(S.B)>=.02)L('  radius '+Math.round(BRHO/Math.abs(S.B))+' mm');y+=8;
+  const ym=[0,1,2].map(i=>trace(i,S.B,XM));L('At the mask, beams land at','#ffd25c');for(let i=0;i<3;i++)L('  '+GN[i].padEnd(6)+(ym[i]>=0?'+':'')+ym[i].toFixed(2)+' mm',guns[i]?GC[i]:'#3a4664');
+  S.mis=Math.max(...ym)-Math.min(...ym);L('Spread at the mask: '+S.mis.toFixed(2)+' mm',S.mis<.1?'#6dff9a':'#ff7a6b');L('(it should be zero)','#8493b8');
+  scaleBar(160,'100 mm');
+ },
+ read(){return 'The Earth\'s field is about 0.05 mT. The yoke needs about 5 mT to reach the edge of this screen.\n'
+   +'Spread of the three beams at the mask: '+(S.mis||0).toFixed(2)+' mm. A slot in the mask is about 0.19 mm wide.\n'
+   +(S.sweep?'Sweep is on. A real line scan takes 52 millionths of a second, about 15,000 flights long, so the field is all but still during one flight. Here the sweep is speeded up against the electrons so both can be seen.':'Sweep is off: the field is held still, as it nearly is during one real flight.')},
+ about:'<p><b>The flight.</b> Past the gun there is no electric field to speak of, so the electrons coast. The yoke makes a magnetic field across the neck. A magnetic field cannot speed an electron up or slow it down; it can only turn it. Inside the field the path is part of a circle, and the stronger the field the tighter the circle.</p><p>The three guns are aimed so their beams cross at the mask. Move the field away from zero and read the spread: the beams no longer cross in the same place, because each enters the field at a different point and angle and travels a different distance to a flat screen. That spread is misconvergence, and it comes straight out of the geometry. A real yoke winds its coils to shape the field so the error cancels, and the ring magnets and strips trim what is left.</p>'
+};
+
+/* =================== 3. the mask =================== */
+const PITCH=0.75,SLOT=0.19,QD=XS-XM,TP=PITCH*XS/XM;     // slot pitch and width at the mask; mask to screen; triad pitch on the screen
+const stripeOf=y=>{const u=((y/TP)%1+1)%1,c=[[0,1],[1/3,2],[2/3,0],[1,1]];for(const[k,col]of c)if(Math.abs(u-k)<.10)return col;return -1};   // lit stripes are 60% of the screen, black matrix the rest
+const mask={name:'3 Mask',perSec:50e-12,
+ init(){S.mp=[];S.macc=0;S.mI=S.mI??0.3;S.shift=S.shift??0;S.cnt=[0,0,0,0];S.sg={};S.sparks=[];S.late=[]},
+ controls(){return slider('sI','Current per gun',0.05,1,0.05,S.mI)+slider('sSh','Stray field (landing shift)',-0.15,0.15,0.005,S.shift)},
+ bind(){$('sI').oninput=e=>{S.mI=+e.target.value};$('sSh').oninput=e=>{S.shift=+e.target.value;S.cnt=[0,0,0,0]}},
+ P(x,y){return[40+(x-283.6)*50,270-y*150]},
+ step(dt,rdt){
+  S.macc+=rdt*mul*60*S.mI/0.3;
+  while(S.macc>1){S.macc--;for(let i=0;i<3;i++)if(guns[i]){const ym=gauss()*.5;if(Math.abs(ym)<1.7)S.mp.push({g:i,x:283.7,ym,sl:(ym-SY[i])/XM+S.shift/QD,st:0})}}
+  const v=speed(VA)*1e3;
+  for(const p of S.mp){const x1=p.x+v*dt;
+   if(p.st===0&&x1>=XM){const k=Math.round(p.ym/PITCH);if(Math.abs(p.ym-k*PITCH)>SLOT/2){p.dead=1;S.late.push(simT+QD/v);S.sparks.push({x:XM-.09,y:p.ym,a:1,c:'#ff9040',m:1});continue}p.st=1}
+   if(x1>=XS){const ys=p.ym+p.sl*QD,s=stripeOf(ys);p.dead=1;if(s<0)S.cnt[3]++;else{S.cnt[s===p.g?1:2]++;const key=Math.round(ys/(TP/3));S.sg[key]={a:1,c:s,y:Math.round(ys/(TP/3))*(TP/3)}}
+    S.sparks.push({x:XS,y:ys,a:1,c:s<0?'#555':GC[p.g]});continue}
+   p.x=x1}
+  S.mp=S.mp.filter(p=>!p.dead);while(S.late.length&&S.late[0]<=simT){S.late.shift();S.cnt[0]++}
+  for(const q of S.sparks)q.a-=rdt*3;S.sparks=S.sparks.filter(q=>q.a>0);
+  for(const k in S.sg){S.sg[k].a-=rdt*1.5;if(S.sg[k].a<=0)delete S.sg[k]}
+ },
+ draw(){
+  const P=this.P;
+  // mask: steel with slots
+  for(let k=-3;k<=3;k++){const a=P(XM-.075,k*PITCH+PITCH-SLOT/2),b=P(XM+.075,k*PITCH+SLOT/2);g.fillStyle='#6f7a90';g.fillRect(a[0],a[1],b[0]-a[0],b[1]-a[1])}
+  // screen: aluminium, stripes in a black matrix, glass
+  let a=P(XS,1.8),b=P(XS+.9,-1.8);g.fillStyle='#0d1c24';g.fillRect(a[0],a[1],b[0]-a[0]+40,b[1]-a[1]);
+  for(let n=-8;n<=8;n++){const y=n*TP/3,c=((n%3)+3)%3,col=[1,2,0][c],top=P(XS,y+TP*.10),bot=P(XS+.28,y-TP*.10),lit=S.sg[n];
+   g.globalAlpha=lit?.35+.65*lit.a:.35;g.fillStyle=GC[col];g.fillRect(top[0],top[1],bot[0]-top[0],bot[1]-top[1]);g.globalAlpha=1;
+   if(lit){g.globalCompositeOperation='lighter';g.globalAlpha=lit.a*.6;g.fillStyle=GC[col];g.fillRect(bot[0],top[1]-3,60,bot[1]-top[1]+6);g.globalAlpha=1;g.globalCompositeOperation='source-over'}}
+  a=P(XS,1.8);b=P(XS,-1.8);g.strokeStyle='#cfd6e6';g.lineWidth=2;g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke();
+  txt('shadow mask: steel, 0.15 mm thick',P(XM,0)[0],8,'#8a94a8',11,'center');txt('aluminium film',P(XS,0)[0]-6,8,'#cfd6e6',11,'right');txt('stripes, glass',P(XS,0)[0]+4,24,'#dbe5ff',11);
+  txt('from the guns, 286 mm to the left',46,H-40,'#8493b8',11);
+  g.globalCompositeOperation='lighter';
+  for(const p of S.mp){const q=P(p.x,p.ym+p.sl*(p.x-XM));dot(q[0],q[1],2,GC[p.g])}
+  for(const s of S.sparks)if(!s.m){const q=P(s.x,s.y);g.globalAlpha=s.a;dot(q[0],q[1],3+4*(1-s.a),s.c);g.globalAlpha=1}
+  g.globalCompositeOperation='source-over';
+  for(const s of S.sparks)if(s.m){const q=P(s.x,s.y);g.globalAlpha=s.a*.8;dot(q[0],q[1],2,s.c);g.globalAlpha=1}
+  g.strokeStyle='#dbe5ff';g.lineWidth=2;const bx=60,by=H-64;g.beginPath();g.moveTo(bx,by-4);g.lineTo(bx,by);g.lineTo(bx+100,by);g.lineTo(bx+100,by-4);g.stroke();txt('2 mm deep',bx+50,by-18,'#dbe5ff',12,'center');
+  g.beginPath();g.moveTo(bx+136,by);g.lineTo(bx+140,by);g.lineTo(bx+140,by-75);g.lineTo(bx+136,by-75);g.stroke();txt('0.5 mm across',bx+146,by-46,'#dbe5ff',12);
+ },
+ read(){const c=S.cnt,n=c[0]+c[1]+c[2]+c[3]||1,on=guns.filter(x=>x).length,Itot=S.mI*1e-3*on,per=S.mI*1e-3/QE*this.perSec/(60*S.mI/0.3);
+  if(n<250)return 'Counting the first electrons to land...\nEach dot stands for about '+big(per)+' electrons. Mask to screen takes '+fmtT(QD/1000/speed(VA))+'.';
+  return 'Stopped by the mask: '+(100*c[0]/n).toFixed(0)+'%   Reached its own colour: '+(100*c[1]/n).toFixed(0)+'%   Reached a wrong colour: '+(100*c[2]/n).toFixed(0)+'%   Lost in the black between stripes: '+(100*c[3]/n).toFixed(0)+'%\n'
+   +'Beam power: '+(Itot*25000).toFixed(1)+' W. Of that, about '+(Itot*25000*c[0]/n).toFixed(1)+' W heats the mask and never makes light.\n'
+   +'Each dot stands for about '+big(per)+' electrons. Mask to screen takes '+fmtT(QD/1000/speed(VA))+'.'},
+ about:'<p><b>The mask.</b> The beam is far wider than one stripe of phosphor, so it cannot be aimed at a single colour. The mask does the aiming. It is a steel sheet with slots, a little behind the screen. The three beams come through each slot from three slightly different directions, about one degree apart, so behind each slot the red gun can see only red phosphor, green only green, blue only blue.</p><p>The price: about three electrons in four hit steel. Their energy becomes heat, the mask swells, and the picture shifts colour as it warms up.</p><p>Move the stray field slider. A small sideways push, such as a loudspeaker magnet or a magnetised mask, changes the landing place by a fraction of a millimetre. At first the black lines between the stripes absorb the error. Further, and electrons from one gun light the neighbouring colour. That is a purity fault.</p>'
+};
+
+/* =================== 4. the phosphor =================== */
+const PH={g:{name:'green: zinc sulphide with copper',Z:23,A:48.7,rho:4.09,Eg:3.7,eta:.20,hv:2.34,tau:60e-6,col:'#5dff7a',act:'Cu',lat:['Zn','S']},
+          b:{name:'blue: zinc sulphide with silver',Z:23,A:48.7,rho:4.09,Eg:3.7,eta:.20,hv:2.76,tau:25e-6,col:'#5a8cff',act:'Ag',lat:['Zn','S']},
+          r:{name:'red: yttrium oxysulphide with europium',Z:22,A:48.4,rho:4.9,Eg:4.7,eta:.13,hv:2.03,tau:900e-6,col:'#ff5a4a',act:'Eu',lat:['Y','O/S']}};
+const AL={Z:13,A:26.98,rho:2.70},TAL=0.2;               // aluminium film, micrometres
+function track(E0,y0,M){   // single-scattering Monte Carlo; lengths in micrometres, energy in keV
+  let x=-1.6,y=y0,z=0,cx=1,cy=0,cz=0,E=E0,t=1.6e-6/speed(E0);const pts=[{x,y,E,t:0},{x:0,y,E,t}],dep={al:0,ph:0,back:0},sp=[];x=1e-6;
+  for(let n=0;n<4000&&E>0.3;n++){
+    const m=x<TAL?AL:M,J=(9.76*m.Z+58.5*Math.pow(m.Z,-.19))*1e-3,al=3.4e-3*Math.pow(m.Z,.67)/E;
+    const sig=5.21e-21*(m.Z*m.Z/(E*E))*(4*Math.PI/(al*(1+al)))*Math.pow((E+511)/(E+1024),2),lam=m.A/(6.022e23*m.rho*sig)*1e4;
+    let s=-lam*Math.log(rnd()+1e-12),scatter=true;
+    const bx=x<TAL?(cx>0?TAL:0):(cx<0?TAL:1e9),dB=cx!==0?(bx-x)/cx:1e9;
+    if(dB>0&&dB<s){s=dB+1e-5;scatter=false}
+    const dE=Math.min(E-.05,78500*m.rho*m.Z/(m.A*E)*Math.log(1.166*(E+.85*J)/J)*s*1e-4);
+    const x0=x,y0b=y;x+=cx*s;y+=cy*s;z+=cz*s;t+=s*1e-6/speed(E-dE/2);E-=dE;
+    if(m===AL)dep.al+=dE;else{dep.ph+=dE;let k=dE/.25;while(k>rnd()){k--;const f=rnd();sp.push({x:x0+(x-x0)*f,y:y0b+(y-y0b)*f,t})}}
+    pts.push({x,y,E,t});
+    if(x<0){dep.back=E;pts[pts.length-1].out=1;break}
+    if(scatter){const R=rnd(),ct=1-2*al*R/(1+al-R),st=Math.sqrt(Math.max(0,1-ct*ct)),ph=6.2832*rnd();
+      if(Math.abs(cz)>.99999){cx=st*Math.cos(ph);cy=st*Math.sin(ph);cz=cz*ct}
+      else{const q=Math.sqrt(1-cz*cz),nx=st*(cx*cz*Math.cos(ph)-cy*Math.sin(ph))/q+cx*ct,ny=st*(cy*cz*Math.cos(ph)+cx*Math.sin(ph))/q+cy*ct;cz=-q*st*Math.cos(ph)+cz*ct;cx=nx;cy=ny}}
+  }
+  if(!pts[pts.length-1].out)dep.ph+=E;
+  return{pts,dep,sp,T:pts[pts.length-1].t};
+}
+const phos={name:'4 Phosphor',perSec:25e-15,
+ init(){S.pc=S.pc??'g';S.nshot=S.nshot??5;S.auto=S.auto??true;S.tot={n:0,al:0,ph:0,back:0,nb:0};S.grains=[[3.0,-2.9,3.2,1],[2.9,3.3,3.1,4],[8.4,.3,3.0,2],[8.3,6.2,3.2,5],[8.6,-5.7,3.1,3],[13.6,3.2,3.2,6],[13.7,-2.9,3.1,2]].map(q=>({x:TAL+q[0],y:q[1],r:q[2],k:q[3]}));this.fire()},
+ fire(){const M=PH[S.pc];S.tr=[];for(let i=0;i<S.nshot;i++)S.tr.push(track(VA,gauss()*1.1,M));S.pt=0;S.phase=0;S.wait=0;S.rays=[];S.photons=0;
+  const Tm=Math.max(...S.tr.map(t=>t.T));S.Tm=Tm;for(const t of S.tr){S.tot.n++;S.tot.al+=t.dep.al;S.tot.ph+=t.dep.ph;S.tot.back+=t.dep.back;if(t.dep.back>0)S.tot.nb++}
+  S.em=[];for(const t of S.tr)for(const s of t.sp)if(rnd()<.5)S.em.push({x:s.x,y:s.y,at:-M.tau*Math.log(rnd()+1e-9)});S.em.sort((a,b)=>a.at-b.at);S.ei=0},
+ controls(){return '<label>Phosphor <select id="sPc"><option value="g">green</option><option value="b">blue</option><option value="r">red</option></select></label><label>Electrons <select id="sN"><option>1</option><option>5</option><option>25</option></select></label><button id="bFire">Fire</button><label><input type="checkbox" id="cAu"'+(S.auto?' checked':'')+'> Repeat</label>'},
+ bind(){$('sPc').value=S.pc;$('sN').value=S.nshot;$('sPc').onchange=e=>{S.pc=e.target.value;S.tot={n:0,al:0,ph:0,back:0,nb:0};this.fire()};$('sN').onchange=e=>{S.nshot=+e.target.value;this.fire()};$('bFire').onclick=()=>this.fire();$('cAu').onchange=e=>{S.auto=e.target.checked}},
+ clock(){return S.phase===0?25e-15:PH[S.pc].tau/1.5},
+ P(x,y){return[150+x*58,270-y*58]},
+ step(dt,rdt){
+  if(S.phase===0){S.pt+=dt;if(S.pt>S.Tm){S.phase=1;S.wait=1.6}}
+  else if(S.phase===1){S.wait-=rdt;if(S.wait<=0){S.phase=2;S.lt=0}}
+  else if(S.phase===2){S.lt+=rdt*mul*PH[S.pc].tau/1.5;
+   while(S.ei<S.em.length&&S.em[S.ei].at<=S.lt){const e=S.em[S.ei++];let a=rnd()*6.2832,dx=Math.cos(a),dy=Math.sin(a);const ray={x0:e.x,y0:e.y,a:1,seg:[]};
+    if(dx<0){const tt=(TAL-e.x)/dx,yb=e.y+dy*tt;ray.seg.push([e.x,e.y,TAL,yb]);if(rnd()<.88){ray.seg.push([TAL,yb,TAL+14,yb+dy/(-dx)*14]);S.photons++}else ray.lost=1}
+    else{ray.seg.push([e.x,e.y,e.x+dx*16,e.y+dy*16]);S.photons++}
+    S.rays.push(ray)}
+   if(S.lt>4*PH[S.pc].tau){S.phase=3;S.wait=1.5}}
+  else{S.wait-=rdt;if(S.wait<=0&&S.auto)this.fire()}
+  for(const r of S.rays)r.a-=rdt*2.2;S.rays=S.rays.filter(r=>r.a>0);
+ },
+ draw(){
+  const P=this.P,M=PH[S.pc];
+  // grains, then aluminium
+  for(const gr of S.grains){const c=P(gr.x,gr.y);g.fillStyle='#16202c';g.strokeStyle='#2c3d52';g.lineWidth=1;g.beginPath();for(let i=0;i<=14;i++){const a=i/14*6.2832,r=gr.r*(1+.12*Math.sin(a*3+gr.k))*58;i?g.lineTo(c[0]+Math.cos(a)*r,c[1]+Math.sin(a)*r):g.moveTo(c[0]+Math.cos(a)*r,c[1]+Math.sin(a)*r)}g.closePath();g.fill();g.stroke()}
+  let a=P(0,5),b=P(TAL,-5);g.fillStyle='#000';g.fillRect(0,0,a[0],H);g.fillStyle='#aab4c8';g.fillRect(a[0],0,b[0]-a[0],H);
+  txt('vacuum',a[0]-12,10,'#8493b8',12,'right');txt('aluminium film, 0.2 um',a[0]-12,28,'#aab4c8',12,'right');txt('phosphor grains, each about 6 um across',a[0]+30,10,'#8493b8',12);txt('to the glass and your eye',W-12,H/2-6,'#8493b8',11,'right');
+  // electron tracks, drawn up to the present moment
+  for(const t of S.tr){const tt=S.phase===0?S.pt:1e9;g.lineWidth=1.3;let last=null;
+   for(let i=1;i<t.pts.length;i++){const p0=t.pts[i-1],p1=t.pts[i];if(p0.t>tt)break;let x=p1.x,y=p1.y;if(p1.t>tt){const f=(tt-p0.t)/(p1.t-p0.t);x=p0.x+(p1.x-p0.x)*f;y=p0.y+(p1.y-p0.y)*f}
+    const e=p0.E/VA;g.strokeStyle='rgba('+Math.round(255)+','+Math.round(120+135*e)+','+Math.round(60+195*e)+','+(S.phase>=2?.25:.9)+')';const q0=P(p0.x,p0.y),q1=P(x,y);g.beginPath();g.moveTo(q0[0],q0[1]);g.lineTo(q1[0],q1[1]);g.stroke();last=[q1[0],q1[1],p1.t>tt]}
+   if(last&&last[2]){g.globalCompositeOperation='lighter';dot(last[0],last[1],3.5,'#fff');g.globalCompositeOperation='source-over'}
+   // electron-hole pairs left behind
+   g.globalCompositeOperation='lighter';for(const s of t.sp)if(s.t<=tt){const q=P(s.x,s.y);dot(q[0],q[1],1.6,S.phase>=2?'rgba(255,220,140,.35)':'rgba(255,220,140,.8)')}g.globalCompositeOperation='source-over'}
+  // light
+  g.globalCompositeOperation='lighter';g.lineWidth=1.5;for(const r of S.rays){g.strokeStyle=M.col;g.globalAlpha=r.a*(r.lost?.4:.9);for(const s of r.seg){const q0=P(s[0],s[1]),q1=P(s[2],s[3]);g.beginPath();g.moveTo(q0[0],q0[1]);g.lineTo(q1[0],q1[1]);g.stroke()}const q=P(r.x0,r.y0);dot(q[0],q[1],3,M.col)}g.globalAlpha=1;g.globalCompositeOperation='source-over';
+  if(S.phase===1){g.fillStyle='rgba(5,7,12,.82)';g.fillRect(180,H/2-46,600,92);g.strokeStyle='#ffd25c';g.strokeRect(180.5,H/2-45.5,600,92);txt('The electrons have stopped. That took '+fmtT(S.Tm)+'.',480,H/2-32,'#ffd25c',14,'center');txt('The light comes out about a billion times more slowly.',480,H/2-8,'#dbe5ff',14,'center');txt('The clock now changes to match.',480,H/2+16,'#dbe5ff',14,'center')}
+  scaleBar(58*2,'2 um (1/500 mm)');
+ },
+ read(){const M=PH[S.pc],t=S.tot,n=t.n||1,eph=t.ph/n;
+  return 'Phosphor: '+M.name+'. '+(S.phase===0?'Now: the electron slowing down.':S.phase===2?'Now: light leaving, over about '+fmtT(M.tau)+'. Photons drawn so far: '+S.photons+'.':'')+'\n'
+   +'Average over '+t.n+' electrons at 25 keV: '+(t.al/n).toFixed(2)+' keV left in the aluminium, '+eph.toFixed(1)+' keV in the phosphor, '+(t.back/n).toFixed(1)+' keV carried back out ('+(100*t.nb/n).toFixed(0)+'% of electrons bounce back out).\n'
+   +'Each electron frees about '+big(eph*1000/(3*M.Eg))+' electron and hole pairs and yields about '+big(eph*1000*M.eta/M.hv)+' photons. About '+(100*(1-M.eta)).toFixed(0)+'% of the energy it leaves ends as heat. One drawn ray stands for about '+Math.round(eph*1000*M.eta/M.hv/Math.max(1,S.em.length/S.nshot))+' photons.'},
+ about:'<p><b>Into the phosphor.</b> The back of the screen is coated with aluminium a fifth of a micrometre thick. A 25 keV electron goes through it almost as if it were not there, losing about 2% of its energy. The film is there for the light: it is a mirror that sends light heading backwards out through the glass, and it carries the electric charge away.</p><p>In the phosphor the electron is knocked about by the atoms. It changes direction hundreds of times, losing a little energy at each step, and stops within a few micrometres, inside the first grain it meets. Some turn right round and leave again. The orange specks are where it left energy: each one is a cluster of electrons knocked loose from their atoms.</p><p>All of that is over in about a tenth of a picosecond. The light is not. The loosened electrons must find an activator atom and wait there before they give up their energy as light, and that takes tens of microseconds. The view changes clocks when the stopping is over, and says so.</p><p class="dim">With the beam at full current, one electron arrives in an area this size about every ten picoseconds. So each cascade is finished long before the next electron arrives, but the light from millions of them overlaps.</p>'
+};
+
+/* =================== 5. atoms (a diagram) =================== */
+const atoms={name:'5 Atoms',perSec:0,
+ init(){S.at=0;S.pc=S.pc??'g';S.jig=0},
+ controls(){return '<label>Phosphor <select id="sPc2"><option value="g">green</option><option value="b">blue</option><option value="r">red</option></select></label>'},
+ bind(){$('sPc2').value=S.pc;$('sPc2').onchange=e=>{S.pc=e.target.value;S.at=0}},
+ step(dt,rdt){S.at+=rdt*mul;if(S.at>19)S.at=0},
+ draw(){
+  const M=PH[S.pc],t=S.at,sp=44,x0=62,y0=70,nx=20,ny=9,ax=13,ay=4;   // 44 px = 0.27 nm
+  const pos=(i,j)=>{const hot=t>12.2&&t<15?Math.exp(-((i-6)**2+(j-6)**2)/6)*3*Math.sin(t*40+i*2+j):0;return[x0+i*sp+hot,y0+j*sp+hot*.7]};
+  for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const p=pos(i,j),cat=(i+j)%2===0,act=i===ax&&j===ay;
+   if(act){const glow=t>9&&t<12.6?1:0;if(glow){g.globalCompositeOperation='lighter';dot(p[0],p[1],26,'rgba(255,255,255,.12)');g.globalCompositeOperation='source-over'}dot(p[0],p[1],15,'#e8e8f0');txt(M.act,p[0],p[1]-6,'#000',11,'center')}
+   else{dot(p[0],p[1],cat?12:15,cat?'#5d6f96':'#b89a3a');txt(cat?M.lat[0]:M.lat[1],p[0],p[1]-5,'#000',cat?9:9,'center')}}
+  // 1. the fast electron
+  const pathY=y0+2.5*sp;
+  if(t<2){const k=t/2,x=-40+k*(W+80);g.globalCompositeOperation='lighter';const gr=g.createLinearGradient(x-220,0,x,0);gr.addColorStop(0,'rgba(255,255,255,0)');gr.addColorStop(1,'rgba(255,255,255,.9)');g.strokeStyle=gr;g.lineWidth=3;g.beginPath();g.moveTo(x-220,pathY-18);g.lineTo(x,pathY+18);g.stroke();dot(x,pathY+18,4,'#fff');g.globalCompositeOperation='source-over'}
+  // 2. pairs: electron (filled) and hole (ring)
+  const pairs=[{i:4,j:2,to:[ax,ay],rad:true},{i:9,j:3,to:[ax,ay],rad:true,el:true},{i:6,j:3,to:[6,6],rad:false}];
+  for(const pr of pairs){const born=.5+pr.i*.09;if(t<born)continue;const a=pos(pr.i,pr.j);
+   const walk=(k,seed,target,t0,t1)=>{const f=Math.max(0,Math.min(1,(t-t0)/(t1-t0))),b=pos(target[0],target[1]),w=(1-f)*Math.sin(f*17+seed)*30;return[a[0]+(b[0]-a[0])*f+w*Math.cos(seed*3),a[1]+(b[1]-a[1])*f+w*Math.sin(seed*5)]};
+   if(pr.rad){
+    if(!pr.el&&t<12.4){const h=walk(0,1.3,pr.to,2.2,8.6);g.strokeStyle='#ffb060';g.lineWidth=2;g.beginPath();g.arc(h[0],h[1],6,0,7);g.stroke()}
+    if(pr.el&&t<12.4){const e=walk(0,4.1,pr.to,3,11.6);dot(e[0],e[1],4,'#9fe8ff')}
+    if(!pr.el&&t<3.4&&t>born){const e=walk(0,2.2,[pr.i-3,pr.j+4],born,3.4);dot(e[0],e[1],4,'#9fe8ff')}
+    if(pr.el&&t<3.6&&t>born){const h=walk(0,5.2,[pr.i+3,pr.j+4],born,3.6);g.strokeStyle='#ffb060';g.lineWidth=2;g.beginPath();g.arc(h[0],h[1],6,0,7);g.stroke()}
+   }else if(t<12.2){const h=walk(0,2.9,pr.to,2.2,11.8),e=walk(0,6.3,pr.to,2.6,12.2);g.strokeStyle='#ffb060';g.lineWidth=2;g.beginPath();g.arc(h[0],h[1],6,0,7);g.stroke();dot(e[0],e[1],4,'#9fe8ff')}
+  }
+  // 3. the photon
+  if(t>12.4&&t<16){const k=(t-12.4)/3.2,a=pos(ax,ay);g.globalCompositeOperation='lighter';g.strokeStyle=M.col;g.lineWidth=3;g.beginPath();for(let s=0;s<120;s++){const x=a[0]+k*520-s*1.6,y=a[1]-(k*520-s*1.6)*.12+Math.sin(s*.35)*9*Math.sin(s/120*3.14);if(x<a[0])break;s?g.lineTo(x,y):g.moveTo(x,y)}g.stroke();if(t<13)dot(a[0],a[1],30*(13-t)/.6,M.col);g.globalCompositeOperation='source-over'}
+  // captions
+  const cap=t<2?['1. The beam electron passes. It crosses this picture in a ten-thousandth of a picosecond,','   and its electric field pulls electrons off atoms near its path.']
+   :t<9?['2. Each atom that lost an electron has a hole (orange ring). The freed electrons (blue) and the holes','   wander through the crystal. This takes from picoseconds to nanoseconds.']
+   :t<12.4?['3. A hole is caught at the '+M.act+' atom, then an electron. They wait there, typically '+fmtT(M.tau)+'.','   Elsewhere a pair meets at a flaw in the crystal and its energy becomes vibration: heat.']
+   :t<16?['4. The electron drops into the hole and the energy leaves as one photon of '+(S.pc==='g'?'green':S.pc==='b'?'blue':'red')+' light, '+M.hv+' eV.','   The pair that met at a flaw makes the atoms shake instead.']
+   :['One 25 keV electron does this a few thousand times before it stops.',''];
+  g.fillStyle='rgba(5,7,12,.85)';g.fillRect(0,H-66,W,66);txt(cap[0],16,H-58,'#dbe5ff',13);txt(cap[1],16,H-40,'#dbe5ff',13);
+  txt('DIAGRAM, NOT A SIMULATION',16,10,'#ffd25c',13);txt('only about 1 atom in 10,000 is an activator; one is placed in view',16,28,'#8493b8',12);
+  scaleBar(sp*2,'0.54 nm');
+ },
+ read(){const M=PH[S.pc];return 'Phosphor: '+M.name+'. A crystal: '+M.lat.join(' and ')+' atoms in a regular lattice, drawn flat here.\n'
+   +'The colour is set by the activator atom ('+M.act+'), not by the crystal around it. Photon energy '+M.hv+' eV.\n'
+   +'Nothing in this view is timed to one clock: the steps differ in speed by a factor of more than a billion, so each caption gives its own duration.'},
+ about:'<p><b>Atoms.</b> This is the smallest view, and it is a diagram: the events at this size are quantum mechanical and cannot be drawn as little balls honestly. The sizes are right, and so is the order of events.</p><p>A phosphor is not made of molecules. It is a crystal, the same pattern of two kinds of atom repeated in all directions, with a trace of a third kind added on purpose. That trace, the activator, is where light is made, and changing it changes the colour: silver in zinc sulphide gives blue, copper gives green. Red uses a different crystal with europium.</p><p>Most pairs never reach an activator. They meet at a flaw and their energy becomes heat. That is why a phosphor turns only about a fifth of the beam energy into light.</p>'
+};
+
+/* ---------- frame, controls ---------- */
+const SC=[gun,flight,mask,phos,atoms];
+function show(i){cur=i;simT=0;SC[i].init();$('extra').innerHTML=SC[i].controls?SC[i].controls():'';if(SC[i].bind)SC[i].bind();$('about').innerHTML=SC[i].about;
+  [...$('tabs').children].forEach((b,k)=>b.setAttribute('aria-pressed',k===i));try{location.hash='view-'+(i+1)}catch(e){}}
+SC.forEach((s,i)=>{const b=document.createElement('button');b.textContent=s.name;b.onclick=()=>show(i);$('tabs').appendChild(b)});
+$('bPlay').onclick=()=>{playing=!playing;$('bPlay').textContent=playing?'Pause':'Play';$('bPlay').setAttribute('aria-pressed',playing)};
+$('spd').onchange=e=>{mul=+e.target.value};
+[0,1,2].forEach(i=>{$('g'+i).onclick=()=>{guns[i]=!guns[i];$('g'+i).setAttribute('aria-pressed',guns[i])}});
+let last=performance.now(),rt=0;
+function frame(now){
+  const rdt=Math.min(.05,(now-last)/1000);last=now;const s=SC[cur],ps=s.clock?s.clock():s.perSec;
+  if(playing){const dt=rdt*mul*ps;simT+=dt;s.step(dt,rdt)}
+  g.fillStyle='#03050a';g.fillRect(0,0,W,H);s.draw();
+  if(ps){const f=1/(ps*mul);g.fillStyle='rgba(5,7,12,.8)';g.fillRect(8,H-30,430,22);txt('1 second here = '+fmtT(ps*mul)+' in the tube   (slowed '+big(f)+' times)',14,H-26,'#ffd25c',12)}
+  rt+=rdt;if(rt>.2){rt=0;$('read').textContent=s.read()}
+  requestAnimationFrame(frame);
+}
+{const m=/^#view-(\d)$/.exec(location.hash);show(m?Math.min(4,Math.max(0,+m[1]-1)):0)}
+requestAnimationFrame(frame);
+window.__slow={S,show,track,PH,trace,get cur(){return cur},BRHO,XM};
+})();
+</script>
+</body></html>

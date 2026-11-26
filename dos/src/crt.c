@@ -103,19 +103,27 @@ static void pt(int c, int u, int v, int *x, int *y)
 static int inten(void) { int b = e(CT_BRIGHT); return b < 0 ? (255 + b * 16 < 60 ? 60 : 255 + b * 16) : 255; }
 static int blurw(void) { return abs(e(CT_FOCUS)) / 3; }
 
+static int seg_w, seg_step, seg_k[32];           /* blur half-width and the brightness of each parallel line, set once per redraw */
+static void seg_prep(void)
+{
+    int w = blurw(), I = inten() * 2 / (w + 2), o;
+    if (w > 15) w = 15;
+    seg_step = w >= 5 ? 3 : w >= 2 ? 2 : 1;      /* a wide blur is drawn with fewer, brighter lines; the dither hides the gaps */
+    w -= w % seg_step; seg_w = w;
+    for (o = -w; o <= w; o++) { int k = I * seg_step * (w + 1 - abs(o)) / (w + 1); seg_k[o + w] = k > 255 ? 255 : k; }
+}
 static void seg(int c, int x0, int y0, int x1, int y1, int vert)
 {
-    int w = blurw(), I = inten() * 2 / (w + 2), o, r, g, b;
-    for (o = -w; o <= w; o++) {
-        int k = I * (w + 1 - abs(o)) / (w + 1);
-        r = c == 0 ? k : 0; g = c == 1 ? k : 0; b = c == 2 ? k : 0;
-        if (vert) addline(SX(x0) + o, SY(y0), SX(x1) + o, SY(y1), r, g, b);
-        else addline(SX(x0), SY(y0) + o, SX(x1), SY(y1) + o, r, g, b);
+    int w = seg_w, o, ax = SX(x0), ay = SY(y0), bx = SX(x1), by = SY(y1);
+    for (o = -w; o <= w; o += seg_step) {
+        if (vert) addline1(ax + o, ay, bx + o, by, c, seg_k[o + w]);
+        else addline1(ax, ay + o, bx, by + o, c, seg_k[o + w]);
     }
 }
 static void hatch(void)
 {
     int c, k, j, x0, y0, x1, y1;
+    seg_prep();
     for (c = 0; c < 3; c++) {
         for (k = 0; k <= 12; k++) {
             int u = -256 + k * 512 / 12;
@@ -140,15 +148,18 @@ static void hatch(void)
 }
 static void dots(void)
 {
-    int c, k, j, x, y, w = blurw() + 1, I = inten() * 3 / (w + 2), a, b;
+    int c, k, j, x, y, w = blurw() + 1, I = inten() * 3 / (w + 2), a, b, n = 0, i;
+    static signed char oa[400], ob[400]; static u8 oq[400];     /* the spot, worked out once */
+    if (w > 8) w = 8;
+    for (a = -w; a <= w; a++) for (b = -w; b <= w; b++) {
+        int d = abs(a) + abs(b);
+        if (d > w + 1 || n >= 400) continue;
+        oa[n] = (signed char)a; ob[n] = (signed char)b; oq[n++] = (u8)(I * (w + 2 - d) / (w + 2));
+    }
     for (c = 0; c < 3; c++) for (k = 0; k <= 12; k++) for (j = 0; j <= 9; j++) {
         pt(c, -256 + k * 512 / 12, -256 + j * 512 / 9, &x, &y);
-        for (a = -w; a <= w; a++) for (b = -w; b <= w; b++) {
-            int d = abs(a) + abs(b), q;
-            if (d > w + 1) continue;
-            q = I * (w + 2 - d) / (w + 2);
-            addrgb(SX(x) + a, SY(y) + b, c == 0 ? q : 0, c == 1 ? q : 0, c == 2 ? q : 0);
-        }
+        x = SX(x); y = SY(y);
+        for (i = 0; i < n; i++) addpix1(x + oa[i], y + ob[i], c, oq[i]);
     }
 }
 /* left and right edge of the raster on each face row */
@@ -184,7 +195,7 @@ static int contam(int u, int v)
 {
     int k = 0;
     if (rpm) {
-        int t = (rpx * u + rpy * v) / (127 * 256);   /* -m..m */
+        int t = (rpx * u + rpy * v) >> 15;            /* -m..m; 127 * 256 is close to 32768 */
         k = (rpm + t) * 12;
     }
     if (magnetized) {
@@ -194,59 +205,79 @@ static int contam(int u, int v)
     k += jitter_k;
     return k < 0 ? 0 : k > 255 ? 255 : k;
 }
+/* raster coordinate of each face column and row, worked out once per redraw */
+static short ucol[FW], vrow[FH];
+static void uv_tables(void)
+{
+    int x, y, hs = 256 + 3 * e(CT_HS), vs = 256 + 3 * e(CT_VS);
+    int ox = CXF + e(CT_HC) * 3 + jitter_x / 16, oy = CYF + e(CT_VC) * 3 + jitter_y / 16;
+    for (x = 0; x < FW; x++) ucol[x] = (short)((FX + x - ox) * 256 * 256 / (HW * hs));
+    for (y = 0; y < FH; y++) vrow[y] = (short)((FY + y - oy) * 256 * 256 / (HH * vs));
+}
+/* black outside the raster on every face row */
+static void mask_rows(void)
+{
+    int y;
+    for (y = 0; y < FH; y++) {
+        int a = xl[y], b = xr[y];
+        if (a > b) { hline(FX, FX + FW - 1, FY + y, 0); continue; }
+        if (a > FX) hline(FX, a - 1, FY + y, 0);
+        if (b < FX + FW - 1) hline(b + 1, FX + FW - 1, FY + y, 0);
+    }
+}
+/* A purity field changes slowly across the screen, so its colour is worked out once per 4x4 block
+   and dithered from a table. A 486 redraws it in a few hundredths of a second. */
 static void field(int white)
 {
-    int y, x, hs = 256 + 3 * e(CT_HS), vs = 256 + 3 * e(CT_VS), I = inten();
-    int ox = CXF + e(CT_HC) * 3 + jitter_x / 16, oy = CYF + e(CT_VC) * 3 + jitter_y / 16;
+    int bx, by, j, I = inten(), lr_ = -1, lg_ = -1, lb_ = -1;
+    u8 pat[16];
     vec_res(CT_PURA, &rpx, &rpy);
     rpm = (abs(rpx) > abs(rpy) ? abs(rpx) + abs(rpy) / 2 : abs(rpy) + abs(rpx) / 2) / 127;
-    outline();
-    for (y = 0; y < FH; y++) {
-        int v = (FY + y - oy) * 256 * 256 / (HH * vs);
-        if (xl[y] > xr[y]) continue;
-        for (x = xl[y]; x <= xr[y]; x++) {
-            int u, k, r, g, b;
-            if (x < FX || x >= FX + FW) continue;
-            u = (x - ox) * 256 * 256 / (HW * hs);
-            k = contam(u, v);
+    outline(); uv_tables();
+    for (by = 0; by < FH; by += 4) {
+        int v = vrow[by + 2];
+        for (bx = 0; bx < FW; bx += 4) {
+            int k = contam(ucol[bx + 2], v), r, g, b;
             if (white) { r = I; g = I - k * I / 300; b = I - k * I / 600; }
             else { r = I - k * I / 420; g = k * I / 360; b = k * I / 1200; }
-            back[(u32)(FY + y) * SW + x] = (u8)dith(x, FY + y, r, g, b);
+            r &= ~3; g &= ~3; b &= ~3;
+            if (r != lr_ || g != lg_ || b != lb_) { dith16(r, g, b, pat); lr_ = r; lg_ = g; lb_ = b; }
+            for (j = 0; j < 4; j++) memcpy(back + (u32)(FY + by + j) * SW + FX + bx, pat + (((FY + by + j) & 3) << 2), 4);
         }
-        if ((y & 31) == 0) sys_idle();
+        if ((by & 63) == 0) sys_idle();
     }
+    mask_rows();
 }
 static void pluge(void)
 {
-    int y, x, hs = 256 + 3 * e(CT_HS), vs = 256 + 3 * e(CT_VS), br = e(CT_BRIGHT);
-    int ox = CXF + e(CT_HC) * 3, oy = CYF + e(CT_VC) * 3;
-    outline();
-    for (y = 0; y < FH; y++) {
-        int v = (FY + y - oy) * 256 * 256 / (HH * vs);
-        if (xl[y] > xr[y]) continue;
-        for (x = xl[y]; x <= xr[y]; x++) {
-            int u, sig = 4, g;
-            if (x < FX || x >= FX + FW) continue;
-            u = (x - ox) * 256 * 256 / (HW * hs);
-            if (v > -200 && v < 200) {
-                if (u > -230 && u < -200) sig = 2;            /* blacker than black */
-                else if (u > -170 && u < -140) sig = 6;       /* just above black */
-                else if (u > -110 && u < -80) sig = 8;
-                else if (u > -40) sig = 4 + ((u + 40) / 37 + 1) * 19 / 8;   /* eight grey steps */
-            }
-            g = sig + br - 4;
-            if (g < 0) g = 0;
-            if (g > 23) g = 23;
-            back[(u32)(FY + y) * SW + x] = (u8)GRAY(g);
-        }
+    int y, x, br = e(CT_BRIGHT);
+    u8 row[FW];
+    outline(); uv_tables();
+    for (x = 0; x < FW; x++) {
+        int u = ucol[x], sig = 4, g;
+        if (u > -230 && u < -200) sig = 2;            /* blacker than black */
+        else if (u > -170 && u < -140) sig = 6;       /* just above black */
+        else if (u > -110 && u < -80) sig = 8;
+        else if (u > -40) sig = 4 + ((u + 40) / 37 + 1) * 19 / 8;   /* eight grey steps */
+        g = sig + br - 4;
+        row[x] = (u8)GRAY(g < 0 ? 0 : g > 23 ? 23 : g);
     }
+    { int g = br; u8 flat = (u8)GRAY(g < 0 ? 0 : g > 23 ? 23 : g);
+      for (y = 0; y < FH; y++) {
+        if (vrow[y] > -200 && vrow[y] < 200) memcpy(back + (u32)(FY + y) * SW + FX, row, FW);
+        else memset(back + (u32)(FY + y) * SW + FX, flat, FW);
+      } }
+    mask_rows();
 }
 void crt_draw(void)
 {
     int y, x, br = e(CT_BRIGHT);
     clip(FX, FY, FX + FW - 1, FY + FH - 1);
     if (br > 0 && pattern != PAT_PLUGE) {      /* black level too high: the whole face glows */
-        for (y = FY; y < FY + FH; y++) for (x = FX; x < FX + FW; x++) back[(u32)y * SW + x] = (u8)dith(x, y, br * 12, br * 12, br * 13);
+        u8 pat[16], row[4][FW];
+        dith16(br * 12, br * 12, br * 13, pat);
+        for (y = 0; y < 4; y++) for (x = 0; x < FW; x++) row[y][x] = pat[(y << 2) | ((FX + x) & 3)];
+        for (y = FY; y < FY + FH; y++) memcpy(back + (u32)y * SW + FX, row[y & 3], FW);
     } else fill(FX, FY, FW, FH, pattern == PAT_PLUGE && br > 4 ? GRAY(0) : 0);
     conv_prep();
     switch (pattern) {

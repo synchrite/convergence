@@ -187,6 +187,11 @@ void vid_present(void)
 /* ---------- palette ---------- */
 static const u8 cube6[6] = { 0, 13, 25, 38, 50, 63 };
 static u8 lr[256], lg[256], lb[256];   /* cube level of each colour, for additive drawing */
+static const u8 bay[16] = { 0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5 };
+/* Ordered dither without division: lv[v][i] is the cube level (0..5) of intensity v at Bayer cell i. */
+static u8 lv[256][16];
+static u8 addc[3][6][256];             /* addc[gun][n][i]: palette index i with one gun raised n cube levels */
+static const u8 m36[12] = { 0, 36, 72, 108, 144, 180, 180, 180, 180, 180, 180, 180 }, m6[12] = { 0, 6, 12, 18, 24, 30, 30, 30, 30, 30, 30, 30 }, m1[12] = { 0, 1, 2, 3, 4, 5, 5, 5, 5, 5, 5, 5 };
 void pal_build(void)
 {
     int i, r, g, b;
@@ -196,6 +201,7 @@ void pal_build(void)
         {63,44,8},{10,60,18},{63,12,10}, /* amber, green LED, red LED */
         {4,6,14},{63,58,20},{63,63,63}   /* ink, selection, white */
     };
+    for (i = 0; i < 256; i++) for (r = 0; r < 16; r++) { g = (i * 5 + bay[r] * 16 + 8) / 255; lv[i][r] = (u8)(g > 5 ? 5 : g); }
     for (i = 0; i < 216; i++) {
         r = i / 36; g = (i / 6) % 6; b = i % 6;
         pal[i * 3] = cube6[r]; pal[i * 3 + 1] = cube6[g]; pal[i * 3 + 2] = cube6[b];
@@ -209,6 +215,11 @@ void pal_build(void)
     for (i = 0; i < 16; i++) {
         pal[(240 + i) * 3] = extra[i][0]; pal[(240 + i) * 3 + 1] = extra[i][1]; pal[(240 + i) * 3 + 2] = extra[i][2];
         lr[240 + i] = (u8)((extra[i][0] * 5 + 31) / 63); lg[240 + i] = (u8)((extra[i][1] * 5 + 31) / 63); lb[240 + i] = (u8)((extra[i][2] * 5 + 31) / 63);
+    }
+    for (i = 0; i < 256; i++) for (r = 0; r < 6; r++) {
+        addc[0][r][i] = (u8)(m36[lr[i] + r] + m6[lg[i]] + m1[lb[i]]);
+        addc[1][r][i] = (u8)(m36[lr[i]] + m6[lg[i] + r] + m1[lb[i]]);
+        addc[2][r][i] = (u8)(m36[lr[i]] + m6[lg[i]] + m1[lb[i] + r]);
     }
 }
 void pal_apply(int level, int guns)
@@ -294,15 +305,17 @@ void disc(int cx, int cy, int r, int c)
     for (y = -r; y <= r; y++) { x = 0; while ((x + 1) * (x + 1) + y * y <= r * r) x++; hline(cx - x, cx + x, cy + y, c); }
 }
 int rgbc(int r, int g, int b) { return ((r * 5 + 127) / 255) * 36 + ((g * 5 + 127) / 255) * 6 + (b * 5 + 127) / 255; }
-static const u8 bay[16] = { 0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5 };
+#define CL8(v) ((v) < 0 ? 0 : (v) > 255 ? 255 : (v))
 int dith(int x, int y, int r, int g, int b)
 {
-    int t = bay[((y & 3) << 2) | (x & 3)] * 16 + 8;   /* 8..248 */
-    int R = (r * 5 + t) / 255, G = (g * 5 + t) / 255, B = (b * 5 + t) / 255;
-    if (R > 5) R = 5;
-    if (G > 5) G = 5;
-    if (B > 5) B = 5;
-    return R * 36 + G * 6 + B;
+    int i = ((y & 3) << 2) | (x & 3);
+    return m36[lv[CL8(r)][i]] + m6[lv[CL8(g)][i]] + m1[lv[CL8(b)][i]];
+}
+/* the sixteen palette indices of one colour, by Bayer cell ((y & 3) * 4 + (x & 3)) */
+void dith16(int r, int g, int b, u8 *out)
+{
+    int i; const u8 *pr = lv[CL8(r)], *pg = lv[CL8(g)], *pb = lv[CL8(b)];
+    for (i = 0; i < 16; i++) out[i] = (u8)(m36[pr[i]] + m6[pg[i]] + m1[pb[i]]);
 }
 void dfill(int x, int y, int w, int h, int r0, int g0, int b0, int r1, int g1, int b1)
 {
@@ -315,15 +328,37 @@ void dfill(int x, int y, int w, int h, int r0, int g0, int b0, int r1, int g1, i
 }
 void addrgb(int x, int y, int r, int g, int b)
 {
-    u8 *p; int t, R, G, B;
+    u8 *p; int i;
     if (x < cx0 || x > cx1 || y < cy0 || y > cy1) return;
     p = back + (u32)y * SW + x;
-    t = bay[((y & 3) << 2) | (x & 3)] * 16 + 8;
-    R = lr[*p] + (r * 5 + t) / 255; G = lg[*p] + (g * 5 + t) / 255; B = lb[*p] + (b * 5 + t) / 255;
-    if (R > 5) R = 5;
-    if (G > 5) G = 5;
-    if (B > 5) B = 5;
-    *p = (u8)(R * 36 + G * 6 + B);
+    i = ((y & 3) << 2) | (x & 3);
+    *p = (u8)(m36[lr[*p] + lv[CL8(r)][i]] + m6[lg[*p] + lv[CL8(g)][i]] + m1[lb[*p] + lv[CL8(b)][i]]);
+}
+void addline(int x0, int y0, int x1, int y1, int r, int g, int b);
+/* One gun's light, the fast way: no division, no call per pixel. c = 0 red, 1 green, 2 blue; v = 0..255. */
+void addpix1(int x, int y, int c, int v)
+{
+    u8 *p; int n;
+    if (x < cx0 || x > cx1 || y < cy0 || y > cy1) return;
+    n = lv[CL8(v)][((y & 3) << 2) | (x & 3)];
+    if (n) { p = back + (u32)y * SW + x; *p = addc[c][n][*p]; }
+}
+void addline1(int x0, int y0, int x1, int y1, int c, int v)
+{
+    int dx = abs(x1 - x0), dy = abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1, e = dx - dy, e2, n, sp = sy * SW;
+    const u8 *L = lv[CL8(v)]; u8 *p; const u8 (*T)[256] = addc[c];
+    if (x0 < cx0 || x0 > cx1 || x1 < cx0 || x1 > cx1 || y0 < cy0 || y0 > cy1 || y1 < cy0 || y1 > cy1) {   /* partly outside: the careful way */
+        addline(x0, y0, x1, y1, c == 0 ? v : 0, c == 1 ? v : 0, c == 2 ? v : 0); return;
+    }
+    p = back + (u32)y0 * SW + x0;
+    for (;;) {
+        if (x0 == x1 && y0 == y1) break;
+        n = L[((y0 & 3) << 2) | (x0 & 3)];
+        if (n) *p = T[n][*p];
+        e2 = 2 * e;
+        if (e2 > -dy) { e -= dy; x0 += sx; p += sx; }
+        if (e2 < dx) { e += dx; y0 += sy; p += sp; }
+    }
 }
 void addline(int x0, int y0, int x1, int y1, int r, int g, int b)
 {

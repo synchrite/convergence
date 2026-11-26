@@ -67,6 +67,7 @@ int key_get(void)
     if (r.h.al == 0 || r.h.al == 0xE0) return r.h.ah << 8;
     return r.h.al;
 }
+int key_more(void) { return !auto_mode && *(volatile u16 *)0x41A != *(volatile u16 *)0x41C; }
 int key_wait(void)
 {
     int k;

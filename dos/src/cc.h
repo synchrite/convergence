@@ -44,9 +44,12 @@ void circle(int cx, int cy, int r, int c);
 void disc(int cx, int cy, int r, int c);
 int  rgbc(int r, int g, int b);              /* nearest cube colour, 0..255 in */
 int  dith(int x, int y, int r, int g, int b);/* ordered-dither cube colour */
+void dith16(int r, int g, int b, u8 *out);   /* the same colour for all 16 Bayer cells, index (y & 3) * 4 + (x & 3) */
 void dfill(int x, int y, int w, int h, int r0, int g0, int b0, int r1, int g1, int b1); /* vertical dithered gradient */
 void addrgb(int x, int y, int r, int g, int b); /* additive light, 0..255 per gun */
 void addline(int x0, int y0, int x1, int y1, int r, int g, int b);
+void addpix1(int x, int y, int c, int v);                 /* one gun only: 0 red, 1 green, 2 blue */
+void addline1(int x0, int y0, int x1, int y1, int c, int v);
 void text(int x, int y, const char *s, int c);     /* 8x16 ROM font */
 void text8(int x, int y, const char *s, int c);    /* 8x8 ROM font */
 void textbig(int x, int y, const char *s, int c, int sc); /* scaled 8x16 */
@@ -74,6 +77,7 @@ void sys_done(void);
 u32  ms_now(void);
 int  key_get(void);     /* 0 if none; ASCII, or scan<<8 for extended keys */
 int  key_wait(void);
+int  key_more(void);    /* a key is waiting: skip the redraw and take it first */
 void sys_idle(void);    /* call often: runs the sound sequencer */
 extern int auto_mode;   /* scripted run for testing */
 void auto_load(const char *file);

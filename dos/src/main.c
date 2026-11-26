@@ -6,7 +6,7 @@ static void upper(char *s) { for (; *s; s++) *s = (char)toupper((unsigned char)*
 
 int main(int argc, char **argv)
 {
-    int i, e, nosound = 0;
+    int i, e, nosound = 0, bench = 0;
     for (i = 1; i < argc; i++) {
         char a[40]; strncpy(a, argv[i], 39); a[39] = 0; upper(a);
         if (!strcmp(a, "/BANK")) vid_force_bank = 1;
@@ -14,6 +14,7 @@ int main(int argc, char **argv)
         else if (!strcmp(a, "/NOSB")) snd_no_sb = 1;
         else if (!strcmp(a, "/NOADLIB")) snd_no_adlib = 1;
         else if (!strncmp(a, "/AUTO:", 6)) auto_load(argv[i] + 6);
+        else if (!strcmp(a, "/BENCH")) bench = 1;
         else {
             printf("CHARGE! CONVERGENCE, DOS edition\n\n"
                    "CONVERGE [/BANK] [/NOSOUND] [/NOSB] [/NOADLIB]\n\n"
@@ -32,6 +33,13 @@ int main(int argc, char **argv)
         snd_done(); sys_done();
         printf("CHARGE! CONVERGENCE cannot start.\n\n%s\n", vid_error(e));
         return 2;
+    }
+    if (bench) {     /* time the drawing code: CONVERGE /BENCH > OUT.TXT */
+        extern void game_bench(u32 *t);
+        u32 t[9]; game_bench(t);
+        vid_done(); snd_done(); sys_done();
+        printf("ms per frame: hatch %lu  dots %lu  red %lu  white %lu  pluge %lu  panel %lu  present(full) %lu  present(same) %lu  hatch in focus %lu\n", t[0], t[1], t[2], t[3], t[4], t[5], t[6], t[7], t[8]);
+        return 0;
     }
     game_main();
     vid_done(); snd_done(); sys_done();

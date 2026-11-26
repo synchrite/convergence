@@ -435,7 +435,7 @@ static int bench(const char *title, u32 mask, int partime, int startpat)
         u32 now = ms_now(); int s = (int)((now - t_start) / 1000);
         if ((now < msg_until) != (lastmsg != 0)) { lastmsg = now < msg_until; panel_dirty = 1; }
         if (diff == 1 && inspect_until && now > inspect_until) { inspect_until = 0; panel_dirty = 1; }
-        if (face_dirty) { draw_face(); face_dirty = 0; panel_dirty = 1; }
+        if (face_dirty && !key_more()) { draw_face(); face_dirty = 0; panel_dirty = 1; }
         if (panel_dirty) { draw_panel(); draw_info(); panel_dirty = 0; lastsec = -1; }
         if (s != lastsec) { draw_header(); lastsec = s; present(); }
         k = key_get();
@@ -558,4 +558,17 @@ void game_main(void)
         else if (s == 4) { menu_bg(); logo(0); setup(); }
     }
     pal_fade(64, 0);
+}
+
+/* /BENCH: milliseconds for one redraw of each part of the service bench */
+void game_bench(u32 *t)
+{
+    int p, i; u32 t0;
+    setup_job(F_HS | F_P4 | F_PUR | F_MAGNET | F_FOCUS); jobtitle = "BENCH"; par = 60; grp = 0; sel = 0;
+    workshop(); bezel(); cache_bg(); pal_apply(64, 7);
+    for (p = 0; p < NPAT; p++) { pattern = p; t0 = ms_now(); for (i = 0; i < 4; i++) draw_face(); t[p] = (ms_now() - t0) / 4; }
+    t0 = ms_now(); for (i = 0; i < 4; i++) { draw_panel(); draw_info(); } t[5] = (ms_now() - t0) / 4;
+    t0 = ms_now(); for (i = 0; i < 4; i++) { vid_invalidate(); vid_present(); } t[6] = (ms_now() - t0) / 4;
+    t0 = ms_now(); for (i = 0; i < 4; i++) vid_present(); t[7] = (ms_now() - t0) / 4;
+    val[CT_FOCUS] = ideal[CT_FOCUS]; pattern = PAT_HATCH; t0 = ms_now(); for (i = 0; i < 4; i++) draw_face(); t[8] = (ms_now() - t0) / 4;
 }
