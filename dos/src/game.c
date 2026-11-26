@@ -480,21 +480,11 @@ static int bench(const char *title, u32 mask, int partime, int startpat)
         }
     }
 }
-static void ticket(int j)
-{
-    int i; char t[60];
-    workshop();
-    fill(34, 90, 572, 270, 0); fill(30, 86, 572, 270, C_BEIGE0 + 6); bevel(30, 86, 572, 270, C_WHITE, C_BEIGE0 + 2);
-    sprintf(t, "REPAIR TICKET %03d", 101 + j); text(50, 100, t, rgbc(190, 0, 0)); hline(50, 580, 120, C_INK);
-    textbig(50, 130, jobs[j].name, C_INK, 2);
-    text(50, 176, "The customer says:", C_BEIGE0 + 0);
-    text8(50, 198, jobs[j].ticket[0], C_INK);
-    text(50, 222, "Workshop notes:", C_BEIGE0 + 0);
-    for (i = 1; i < 3; i++) text8(50, 244 + (i - 1) * 14, jobs[j].ticket[i], C_INK);
-    sprintf(t, "Par time %d:%02d    Level: %s", jobs[j].par / 60, jobs[j].par % 60, diffname[diff]); text(50, 290, t, C_INK);
-    text(50, 326, "ENTER  start work        ESC  back", rgbc(190, 0, 0));
-    pal_apply(64, 7); present();
-}
+/* chapters: which jobs belong to which skill. The last job is the exam that closes the year. */
+static const u8 chap_of[NJOB] = { 0, 0, 0, 1, 2, 2, 3, 3, 4, 5 };
+static const u8 week_of[NJOB] = { 1, 2, 4, 6, 9, 11, 14, 17, 21, 26 };
+static const char *chap_name[6] = { "1 GEOMETRY", "2 PICTURE", "3 PURITY", "4 STATIC CONV.", "5 DYNAMIC CONV.", "FINAL EXAM" };
+static int ticket(int j) { return shop_scene(week_of[j], jobs[j].name, jobs[j].ticket[0], jobs[j].ticket[1], jobs[j].ticket[2], jobs[j].par, diffname[diff]); }
 static void career(void)
 {
     int sel_j = 0, k, i, st; char t[80];
@@ -502,11 +492,12 @@ static void career(void)
     for (;;) {
         snd_song(SONG_TITLE);
         workshop(); panel(60, 30, 520, 420);
-        textbig(180, 42, "REPAIR QUEUE", C_AMBER, 2);
+        textbig(180, 42, "THE YEAR 1982", C_AMBER, 2);
         for (i = 0; i < NJOB; i++) {
             int y = 92 + i * 30, open = i == 0 || stars[i - 1];
             if (i == sel_j) { fill(76, y - 4, 488, 26, rgbc(20, 40, 110)); bevel(76, y - 4, 488, 26, rgbc(90, 130, 255), rgbc(10, 20, 60)); }
             sprintf(t, "%2d  %s", i + 1, open ? jobs[i].name : "(locked)"); text(88, y, t, open ? C_WHITE : GRAY(9));
+            if (i == 0 || chap_of[i] != chap_of[i - 1]) text8(330, y + 4, chap_name[chap_of[i]], i == sel_j ? C_AMBER : GRAY(12));
             for (st = 0; st < 3; st++) star(470 + st * 28, y + 8, st < stars[i]);
         }
         text8(76, 420, "\x18\x19 choose   ENTER open ticket   ESC back", C_SEL);
@@ -519,9 +510,8 @@ static void career(void)
         if (k == K_F12) vid_shot("QUEUE.BMP");
         if (k == K_ENTER) {
             if (sel_j && !stars[sel_j - 1] && !auto_mode) { snd_sfx(SFX_BUZZ); continue; }
-            ticket(sel_j);
-            for (;;) { k = key_wait(); if (k == K_ENTER || k == K_ESC) break; if (k == K_F12) vid_shot("TICKET.BMP"); }
-            if (k == K_ESC) continue;
+            if (!ticket(sel_j)) continue;
+            if (chap_of[sel_j] < 5 && (sel_j == 0 || chap_of[sel_j] != chap_of[sel_j - 1]) && !stars[sel_j]) manual_page(chap_of[sel_j]);
             sprintf(t, "%d. %s", sel_j + 1, jobs[sel_j].name);
             st = bench(t, jobs[sel_j].faults, jobs[sel_j].par, jobs[sel_j].pat);
             if (st > stars[sel_j]) { stars[sel_j] = (u8)st; save(); }

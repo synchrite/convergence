@@ -57,6 +57,10 @@ extern const char *tp_name[]; extern const char *tp_help[][6]; extern const int 
 #define F_STRIP2 16384
 #define F_STRIP3 32768
 
+/* shop.c */
+int shop_scene(int week, const char *name, const char *cust, const char *note1, const char *note2, int par, const char *level);
+void manual_page(int ch);
+
 /* patterns.c */
 void testpatterns(void);
 #endif

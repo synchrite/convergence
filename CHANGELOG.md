@@ -550,3 +550,15 @@ real experience of adjusting convergence.
 ## 2026-11-26: slow motion removed
 
 - Owner's decision. The mode's source moved to `archive/slowmo-dos/`; the DOS menu is back to six items.
+
+## 2026-11-26: campaign and look, first slice
+
+- Owner's choice: all three looks (night shop, service manual, workbench
+  close-up) and all three campaign shapes (a year in the shop, chapters, open
+  shop), combined. Plan in `docs/CAMPAIGN.md`.
+- Built: the repair queue is now "The year 1982", in five chapters and a final
+  exam. Before each job, a night-shop scene (rain on the window, the set on the
+  bench lighting the room). The first job of each chapter opens with the
+  mentor's page in service-manual style, with numbered steps and a figure.
+- Still to build: workbench close-up and phosphor zoom, open shop, and a
+  fault-finding chapter with meter and scope.
