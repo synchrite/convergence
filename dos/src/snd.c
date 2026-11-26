@@ -1,5 +1,7 @@
 /* Sound: AdLib (OPL2) music and effects, Sound Blaster digitised effects, PC speaker fallback.
-   Everything is polled from the main loop. No interrupt handlers are installed. */
+   The music is stepped from the timer interrupt (sys.c calls snd_tick 146 times a second), so the
+   tempo does not depend on how long the screen takes to draw. Everything else is polled.
+   OPL2 channels: 0 bass, 1 and 2 chords, 3 melody, 4 arpeggio, 5 effects; 6 to 8 are the rhythm voices. */
 #include <i86.h>
 #include <conio.h>
 #include <ctype.h>
@@ -7,14 +9,18 @@
 
 int snd_adlib, snd_sb, snd_music_on = 1, snd_sfx_on = 1;
 int snd_no_adlib, snd_no_sb;
+volatile int snd_ready;                /* the timer interrupt may call snd_tick */
 int sb_base = 0x220, sb_irq = 5, sb_dma = 1, sb_ver;
 
 /* ---------------- OPL2 ---------------- */
+static volatile int in_tick;          /* set while the timer interrupt is using the chip */
 static void opl(int reg, int val)
 {
-    int i;
+    int i, guard = !in_tick;
+    if (guard) _disable();           /* an address and its data must not be split by the interrupt */
     outp(0x388, reg); for (i = 0; i < 6; i++) inp(0x388);
     outp(0x389, val); for (i = 0; i < 35; i++) inp(0x388);
+    if (guard) _enable();
 }
 static int adlib_detect(void)
 {
@@ -27,7 +33,7 @@ static int adlib_detect(void)
     return (a & 0xE0) == 0 && (b & 0xE0) == 0xC0;
 }
 typedef struct { u8 mc, cc, ml, cl, mad, cad, msr, csr, mw, cw, fb; } Ins;
-enum { I_LEAD, I_BASS, I_PAD, I_PLUCK, I_TICK, I_CHIME, I_HUM, I_BUZZ, I_KICK, I_EBASS, I_SNARE, I_HAT, I_STAB };
+enum { I_LEAD, I_BASS, I_PAD, I_PLUCK, I_TICK, I_CHIME, I_HUM, I_BUZZ, I_KICK, I_EBASS, I_SNARE, I_HAT, I_STAB, I_MEL };
 static const Ins ins[] = {
     {0x21, 0x21, 0x1A, 0x00, 0xF2, 0xF2, 0x53, 0x74, 0, 0, 0x0C},  /* lead */
     {0x01, 0x01, 0x10, 0x00, 0xF2, 0xF3, 0x66, 0x77, 0, 0, 0x08},  /* bass */
@@ -38,10 +44,11 @@ static const Ins ins[] = {
     {0x21, 0x21, 0x08, 0x00, 0xF0, 0xF0, 0x0F, 0x0F, 1, 0, 0x0E},  /* hum */
     {0x21, 0x22, 0x00, 0x00, 0xF1, 0xF1, 0x0F, 0x0F, 2, 2, 0x0E},  /* buzz */
     {0x00, 0x00, 0x00, 0x00, 0xF7, 0xF6, 0xF7, 0xF6, 0, 0, 0x0A},  /* kick */
-    {0x21, 0x21, 0x0E, 0x00, 0xF4, 0xF3, 0x55, 0x76, 0, 0, 0x0A},  /* electro bass */
+    {0x21, 0x21, 0x10, 0x00, 0xF3, 0xF2, 0x55, 0x67, 0, 0, 0x0C},  /* electro bass: strong feedback for the chunk */
     {0x0C, 0x01, 0x00, 0x00, 0xF8, 0xF7, 0xF7, 0xF7, 0, 0, 0x0E},  /* snare: heavy feedback for noise */
     {0x0F, 0x0C, 0x00, 0x0A, 0xF9, 0xFA, 0xF9, 0xFA, 0, 0, 0x0E},  /* hi-hat */
-    {0x22, 0x21, 0x14, 0x04, 0xF5, 0xF4, 0x45, 0x56, 1, 0, 0x08}   /* stab */
+    {0x01, 0x01, 0x16, 0x02, 0xF4, 0xF4, 0x56, 0x67, 1, 0, 0x08},  /* stab: short, a little brassy */
+    {0x62, 0x61, 0x1E, 0x04, 0x73, 0x74, 0x35, 0x46, 0, 0, 0x04}   /* melody: soft, hollow, with vibrato */
 };
 static const u8 opoff[9] = { 0, 1, 2, 8, 9, 10, 16, 17, 18 };
 static const u16 fnum[12] = { 0x157, 0x16B, 0x181, 0x198, 0x1B0, 0x1CA, 0x1E5, 0x202, 0x220, 0x241, 0x263, 0x287 };
@@ -76,38 +83,60 @@ static void opl_reset(void)
     memset(chb0, 0, sizeof chb0);
 }
 
-/* ---------------- songs ---------------- */
-#define MAXSTEP 128
-#define NTRK 6
-typedef struct { int stepms, nch, loop; const char *trk[NTRK]; u8 in[NTRK], att[NTRK]; } Song;
-/* Electro groove, 112 beats a minute, four bars: Em7 Em7 C D. Sixteen steps to the bar. */
-#define G_BASS "E2 . . E2 . E3 . E2 . D3 . E2 . . B2 D3 E2 . . E2 . E3 . E2 . D3 . E2 . . B2 D3 " \
-               "C2 . . C2 . C3 . C2 . A#2 . C2 . . G2 A#2 D2 . . D2 . D3 . D2 . C3 . D2 . . A2 C3"
-#define G_STAB "- - B4 - - B4 - - - - B4 - - B4 - B4 - - B4 - - B4 - - - - B4 - - B4 - B4 " \
-               "- - C5 - - C5 - - - - C5 - - C5 - C5 - - D5 - - D5 - - - - D5 - - D5 - D5"
-#define G_LEAD "E5 G5 B5 D6 E6 D6 B5 G5 E5 G5 B5 E6 G6 E6 B5 G5 E5 G5 B5 D6 E6 D6 B5 G5 E5 G5 B5 E6 G6 E6 B5 G5 " \
-               "E5 G5 C6 E6 E6 E6 C6 G5 E5 G5 C6 E6 G6 E6 C6 G5 F#5 A5 D6 F#6 F#6 F#6 D6 A5 F#5 A5 D6 F#6 A6 F#6 D6 A5"
-#define G_KICK "C2 . . . C2 . . . C2 . . . C2 . . . C2 . . . C2 . . . C2 . . . C2 . . . " \
-               "C2 . . . C2 . . . C2 . . . C2 . . . C2 . . . C2 . . . C2 . . . C2 . C2 ."
-#define G_SNARE "- - - - D3 . . . - - - - D3 . . . - - - - D3 . . . - - - - D3 . . . " \
-                "- - - - D3 . . . - - - - D3 . . . - - - - D3 . . . - - - - D3 D3 D3 D3"
-#define G_HAT  "F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 " \
-               "F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6 F#6"
+/* ---------------- music ---------------- */
+#include "song.h"
+typedef struct { u32 step_us; int norder; const u8 *order; u8 in[5], att[5], dratt; } Song;
 static const Song songs[] = {
-  { 0, 0, 0, {0}, {0}, {0} },
-  { 134, 6, 1, { G_BASS, G_STAB, G_LEAD, G_KICK, G_SNARE, G_HAT },      /* title: the full groove */
-    { I_EBASS, I_STAB, I_PLUCK, I_KICK, I_SNARE, I_HAT }, { 0, 12, 14, 0, 6, 20 } },
-  { 134, 6, 1, { G_BASS, G_STAB, "-", G_KICK, G_SNARE, G_HAT },         /* bench: no lead, quieter */
-    { I_EBASS, I_STAB, I_PLUCK, I_KICK, I_SNARE, I_HAT }, { 10, 24, 40, 10, 18, 30 } }
+  { 0, 0, 0, {0}, {0}, 0 },
+  { 133929, sizeof order_title, order_title, { I_EBASS, I_STAB, I_STAB, I_MEL, I_PLUCK }, { 6, 4, 6, 0, 10 }, 0 },    /* title */
+  { 133929, sizeof order_bench, order_bench, { I_EBASS, I_STAB, I_STAB, I_MEL, I_PLUCK }, { 16, 16, 18, 12, 22 }, 10 }   /* bench: the same tune, further back */
 };
-static const Song jings[] = {
-  { 90, 2, 0, { "C5 E5 G5 C6 . G5 C6 . . . . -", "C4 . . G4 . . C5 . . . . -", 0, 0 }, { I_CHIME, I_PLUCK }, { 0, 6 } },
-  { 130, 2, 0, { "E4 . D#4 . D4 . C#4 . . . . -", "A2 . . . . . A1 . . . . -", 0, 0 }, { I_LEAD, I_BASS }, { 6, 4 } },
-  { 70, 1, 0, { "G5 C6 E6 . -", 0, 0, 0 }, { I_CHIME }, { 0 } }
-};
-typedef struct { const Song *s; u8 note[NTRK][MAXSTEP]; int len, pos, acc, base, on; } Player;
-static Player mus, jin;
+static struct { const Song *s; int oi, pos, on; u32 acc; } mus;
+static int bd_reg;
+/* The rhythm voices: bass drum on channel 6, hi-hat and snare on 7, tom and cymbal on 8. */
+static void drums_init(int att)
+{
+    static const u8 d[5][6] = {      /* operator, characteristic, level, attack/decay, sustain/release */
+        { 0x10, 0x00, 0x0C, 0xF8, 0x77, 0 }, { 0x13, 0x00, 0x00, 0xF6, 0x68, 1 },     /* bass drum: modulator, carrier */
+        { 0x11, 0x01, 0x04, 0xF8, 0xF7, 1 },                                          /* hi-hat */
+        { 0x14, 0x01, 0x00, 0xF7, 0x58, 1 },                                          /* snare */
+        { 0x12, 0x02, 0x06, 0xF6, 0x57, 1 } };                                        /* tom */
+    int i;
+    for (i = 0; i < 5; i++) { int lvl = d[i][2] + (d[i][5] ? att : 0); if (lvl > 63) lvl = 63;
+        opl(0x20 + d[i][0], d[i][1]); opl(0x40 + d[i][0], lvl); opl(0x60 + d[i][0], d[i][3]); opl(0x80 + d[i][0], d[i][4]); opl(0xE0 + d[i][0], 0); }
+    { int lvl = 0x06 + att; if (lvl > 63) lvl = 63; opl(0x35, 0x01); opl(0x55, lvl); opl(0x75, 0xF5); opl(0x95, 0x55); opl(0xF5, 0); }   /* cymbal */
+    opl(0xC6, 0x08); opl(0xC7, 0x00); opl(0xC8, 0x00);
+    opl(0xA6, 0x57); opl(0xB6, 0x0D);      /* bass drum pitch */
+    opl(0xA7, 0x00); opl(0xB7, 0x0E);      /* hi-hat and snare */
+    opl(0xA8, 0xC0); opl(0xB8, 0x09);      /* tom and cymbal */
+    bd_reg = 0x20; opl(0xBD, bd_reg);
+}
+static void mus_ins(int c) { opl_ins(c, mus.s->in[c], mus.s->att[c]); }
+static void mus_start(const Song *s)
+{
+    int c;
+    _disable();
+    mus.on = 0;
+    _enable();
+    for (c = 0; c < 5; c++) opl_off(c);
+    opl(0xBD, 0); bd_reg = 0;
+    mus.s = s; mus.oi = 0; mus.pos = 0;
+    if (!s || !s->norder) return;
+    for (c = 0; c < 5; c++) mus_ins(c);
+    drums_init(s->dratt);
+    mus.acc = s->step_us;        /* the first step sounds at once */
+    mus.on = 1;
+}
 
+/* ---------------- jingles: two voices, borrowed from the melody and arpeggio channels ---------------- */
+#define MAXSTEP 16
+typedef struct { int stepms, nch; const char *trk[2]; u8 in[2], att[2]; } Jing;
+static const Jing jings[] = {
+  { 90, 2, { "C5 E5 G5 C6 . G5 C6 . . . . -", "C4 . . G4 . . C5 . . . . -" }, { I_CHIME, I_PLUCK }, { 0, 6 } },
+  { 130, 2, { "E4 . D#4 . D4 . C#4 . . . . -", "A2 . . . . . A1 . . . . -" }, { I_LEAD, I_BASS }, { 6, 4 } },
+  { 70, 1, { "G5 C6 E6 . -", 0 }, { I_CHIME }, { 0 } }
+};
+static struct { const Jing *s; u8 note[2][MAXSTEP]; int len, pos, on; u32 acc; } jin;
 static int parse(const char *t, u8 *out)
 {
     int n = 0;
@@ -126,31 +155,51 @@ static int parse(const char *t, u8 *out)
     }
     return n;
 }
-static void play_start(Player *p, const Song *s, int base)
+static void jin_start(const Jing *s)
 {
     int c, l;
-    for (c = 0; c < (p->s ? p->s->nch : 0); c++) if (p->on && snd_adlib) opl_off(p->base + c);
-    p->s = s; p->base = base; p->pos = 0; p->acc = 0; p->len = 0; p->on = 0;
-    if (!s || !s->nch) return;
-    for (c = 0; c < s->nch; c++) {
-        l = parse(s->trk[c], p->note[c]);
-        if (l > p->len) p->len = l;
-        if (snd_adlib) opl_ins(base + c, s->in[c], s->att[c]);
-    }
-    p->on = 1; p->acc = s->stepms;   /* first step sounds at once */
+    _disable(); jin.on = 0; _enable();
+    opl_off(3); opl_off(4);
+    jin.s = s; jin.pos = 0; jin.len = 0; memset(jin.note, 0, sizeof jin.note);
+    for (c = 0; c < s->nch; c++) { l = parse(s->trk[c], jin.note[c]); if (l > jin.len) jin.len = l; opl_ins(3 + c, s->in[c], s->att[c]); }
+    jin.acc = (u32)s->stepms * 1000; jin.on = 1;
 }
-static void play_step(Player *p)
+/* Called 146 times a second from the timer interrupt. Keep it short. */
+static int sfx_left, hum_t;
+void snd_tick(void)
 {
     int c;
-    for (c = 0; c < p->s->nch; c++) {
-        int v = p->note[c][p->pos];
-        if (v == 1) opl_off(p->base + c);
-        else if (v > 1) opl_on(p->base + c, v);
+    if (!snd_adlib) return;
+    in_tick = 1;
+    if (mus.on) {
+        mus.acc += 6866;
+        while (mus.acc >= mus.s->step_us) {
+            const u8 (*sec)[SONG_STEPS] = song_sec[mus.s->order[mus.oi]];
+            int m = sec[5][mus.pos];
+            mus.acc -= mus.s->step_us;
+            for (c = 0; c < 5; c++) {
+                int v = sec[c][mus.pos];
+                if (c >= 3 && jin.on) continue;
+                if (v == 1) opl_off(c); else if (v > 1) opl_on(c, v);
+            }
+            if (m) { opl(0xBD, bd_reg & ~m); opl(0xBD, bd_reg | m); }
+            if (++mus.pos >= SONG_STEPS) { mus.pos = 0; if (++mus.oi >= mus.s->norder) mus.oi = 0; }
+        }
     }
-    if (++p->pos >= p->len) {
-        if (p->s->loop) p->pos = 0;
-        else { for (c = 0; c < p->s->nch; c++) opl_off(p->base + c); p->on = 0; }
+    if (jin.on) {
+        jin.acc += 6866;
+        while (jin.on && jin.acc >= (u32)jin.s->stepms * 1000) {
+            jin.acc -= (u32)jin.s->stepms * 1000;
+            for (c = 0; c < jin.s->nch; c++) { int v = jin.note[c][jin.pos]; if (v == 1) opl_off(3 + c); else if (v > 1) opl_on(3 + c, v); }
+            if (++jin.pos >= jin.len) { jin.on = 0; opl_off(3); opl_off(4); if (mus.on) { mus_ins(3); mus_ins(4); } }
+        }
     }
+    if (sfx_left > 0) {
+        sfx_left -= 7;
+        if (hum_t > 0) { hum_t -= 7; opl(0x40 + opoff[5] + 3, 63 - (hum_t > 0 ? hum_t * 63 / 1300 : 0)); }
+        if (sfx_left <= 0) { opl_off(5); hum_t = 0; }
+    }
+    in_tick = 0;
 }
 
 /* ---------------- PC speaker ---------------- */
@@ -281,8 +330,6 @@ static void sb_poll(void)
 }
 
 /* ---------------- effects ---------------- */
-static int sfx_left;      /* ms until the FM effect channel is released */
-static int hum_t;         /* FM degauss in progress */
 void snd_sfx(int n)
 {
     static const u16 s_tick[] = { 1800, 12 }, s_click[] = { 900, 15 }, s_ok[] = { 1319, 60, 1760, 90 }, s_buzz[] = { 110, 250 },
@@ -290,13 +337,14 @@ void snd_sfx(int n)
     if (!snd_sfx_on) return;
     if (snd_sb && (n == SFX_DEGAUSS || n == SFX_CLICK || n == SFX_THUNK)) { sb_play(n == SFX_DEGAUSS ? 0 : n == SFX_CLICK ? 1 : 2); return; }
     if (snd_adlib) {
+        _disable(); sfx_left = 0; _enable();
         switch (n) {
-        case SFX_TICK:    opl_ins(8, I_TICK, 6); opl_on(8, 96); sfx_left = 30; break;
-        case SFX_CLICK:   opl_ins(8, I_KICK, 0); opl_on(8, 60); sfx_left = 40; break;
-        case SFX_OK:      opl_ins(8, I_CHIME, 0); opl_on(8, 88); sfx_left = 220; break;
-        case SFX_BUZZ:    opl_ins(8, I_BUZZ, 2); opl_on(8, 33); sfx_left = 280; break;
-        case SFX_THUNK:   opl_ins(8, I_KICK, 0); opl_on(8, 36); sfx_left = 120; break;
-        case SFX_DEGAUSS: opl_ins(8, I_HUM, 0); opl_on(8, 35); sfx_left = 1300; hum_t = 1300; break;
+        case SFX_TICK:    opl_ins(5, I_TICK, 6); opl_on(5, 96); sfx_left = 30; break;
+        case SFX_CLICK:   opl_ins(5, I_KICK, 0); opl_on(5, 60); sfx_left = 40; break;
+        case SFX_OK:      opl_ins(5, I_CHIME, 0); opl_on(5, 88); sfx_left = 220; break;
+        case SFX_BUZZ:    opl_ins(5, I_BUZZ, 2); opl_on(5, 33); sfx_left = 280; break;
+        case SFX_THUNK:   opl_ins(5, I_KICK, 0); opl_on(5, 36); sfx_left = 120; break;
+        case SFX_DEGAUSS: opl_ins(5, I_HUM, 0); opl_on(5, 35); sfx_left = 1300; hum_t = 1300; break;
         }
         return;
     }
@@ -314,13 +362,13 @@ void snd_song(int n)
     static int cur = -1;
     if (n == cur) return;
     cur = n;
-    play_start(&mus, (snd_adlib && snd_music_on && n) ? &songs[n] : 0, 0);
+    if (snd_adlib) mus_start((snd_music_on && n) ? &songs[n] : 0);
 }
 void snd_jingle(int n)
 {
     static const u16 w[] = { 523, 80, 659, 80, 784, 80, 1047, 200 }, f[] = { 330, 150, 294, 150, 262, 300 }, s[] = { 784, 60, 1047, 60, 1319, 120 };
     if (!snd_sfx_on) return;
-    if (snd_adlib) { play_start(&jin, &jings[n], 6); return; }
+    if (snd_adlib) { jin_start(&jings[n]); return; }
     if (n == JING_WIN) spk_seq(w, 4); else if (n == JING_FAIL) spk_seq(f, 3); else spk_seq(s, 3);
 }
 void snd_poll(u32 now)
@@ -334,23 +382,17 @@ void snd_poll(u32 now)
         spt += dt;
         if (spt >= spq[spi].ms) { spt = 0; if (++spi >= spn) { spn = 0; spk(0); } else spk(spq[spi].f); }
     }
-    if (!snd_adlib) return;
-    if (mus.on) { mus.acc += dt; while (mus.on && mus.acc >= mus.s->stepms) { mus.acc -= mus.s->stepms; play_step(&mus); } }
-    if (jin.on) { jin.acc += dt; while (jin.on && jin.acc >= jin.s->stepms) { jin.acc -= jin.s->stepms; play_step(&jin); } }
-    if (sfx_left > 0) {
-        sfx_left -= dt;
-        if (hum_t > 0) { hum_t -= dt; opl(0x40 + opoff[8] + 3, 63 - (hum_t > 0 ? hum_t * 63 / 1300 : 0)); }
-        if (sfx_left <= 0) { opl_off(8); hum_t = 0; }
-    }
 }
 void snd_init(void)
 {
     snd_adlib = !snd_no_adlib && adlib_detect();
     if (snd_adlib) opl_reset();
     snd_sb = !snd_no_sb && sb_init();
+    snd_ready = 1;
 }
 void snd_done(void)
 {
+    snd_ready = 0; mus.on = 0; jin.on = 0;
     spk(0);
     if (snd_adlib) opl_reset();
     if (snd_sb) { dsp_write(0xD0); dsp_write(0xD3); dsp_reset(); }

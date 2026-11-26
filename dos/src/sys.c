@@ -1,5 +1,6 @@
 /* Timing, keyboard, and a scripted mode used for automated testing. */
 #include <i86.h>
+#include <dos.h>
 #include <conio.h>
 #include <ctype.h>
 #include "cc.h"
@@ -8,24 +9,49 @@ int auto_mode;
 static char *script, *sp;
 static int auto_wait;
 
+/* The timer runs at 1193182 / 8192 = 145.65 Hz. Each tick steps the music; every eighth tick is passed
+   on to the BIOS so the DOS clock keeps its 18.2 Hz. */
+#define DIVISOR 8192u
+extern volatile int snd_ready;
+void snd_tick(void);
+static void (__interrupt __far *old8)(void);
+static volatile u32 ticks;
+static unsigned phase;
+static void __interrupt __far tick_isr(void)
+{
+    ticks++;
+    if (snd_ready) snd_tick();
+    phase += DIVISOR;
+    if (phase >= 65536u) { phase -= 65536u; _chain_intr(old8); }
+    outp(0x20, 0x20);
+}
 void sys_init(void)
 {
-    /* Timer channel 0 in mode 2 at the normal 18.2 Hz rate, so the counter reads linearly. */
-    _disable(); outp(0x43, 0x34); outp(0x40, 0); outp(0x40, 0); _enable();
+    old8 = _dos_getvect(8);
+    _disable();
+    _dos_setvect(8, tick_isr);
+    outp(0x43, 0x34); outp(0x40, DIVISOR & 255); outp(0x40, DIVISOR >> 8);
+    _enable();
 }
 void sys_done(void)
 {
-    _disable(); outp(0x43, 0x36); outp(0x40, 0); outp(0x40, 0); _enable();
+    if (!old8) return;
+    _disable();
+    outp(0x43, 0x36); outp(0x40, 0); outp(0x40, 0);
+    _dos_setvect(8, old8);
+    _enable();
+    old8 = 0;
 }
 u32 ms_now(void)
 {
-    u32 t1, t2; unsigned c;
-    do {
-        t1 = *(volatile u32 *)0x46C;
-        outp(0x43, 0); c = inp(0x40); c |= (unsigned)inp(0x40) << 8;
-        t2 = *(volatile u32 *)0x46C;
-    } while (t1 != t2);
-    return t1 * 55 + (65535u - (c & 0xFFFF)) / 1193;
+    static u32 last; u32 t, ms; unsigned c;
+    _disable();
+    t = ticks; outp(0x43, 0); c = inp(0x40); c |= (unsigned)inp(0x40) << 8;
+    _enable();
+    ms = t * 6 + t * 866 / 1000 + (DIVISOR - 1 - (c & (DIVISOR - 1))) / 1193;   /* 6.866 ms a tick */
+    if (ms < last) ms = last;          /* a tick that has not been counted yet must not run the clock backwards */
+    last = ms;
+    return ms;
 }
 void sys_idle(void) { snd_poll(ms_now()); }
 
