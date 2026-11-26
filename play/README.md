@@ -4,7 +4,7 @@ These files run `dos/CONVERGE.EXE` on the main page.
 
 | File | What it is |
 |---|---|
-| `converge.jsdos` | The DOS program and a DOSBox configuration, zipped. Made by `tools/make_jsdos.py` |
+| `converge-<id>.jsdos` | The DOS program and a DOSBox configuration, zipped. Made by `tools/make_jsdos.py`, which names the file after its contents and points `index.html` at it, so an old copy is never loaded |
 | `js-dos.js`, `js-dos.css` | js-dos 8.5.4, the player |
 | `emulators/` | DOSBox compiled to WebAssembly, from the same package |
 

@@ -110,7 +110,7 @@ static void status_line(char *t)
 {
     char sb[60];
     if (snd_sb) sprintf(sb, "Sound Blaster %d.%02d A%X I%d D%d", sb_ver >> 8, sb_ver & 255, sb_base, sb_irq, sb_dma); else strcpy(sb, "no Sound Blaster");
-    sprintf(t, "VESA %s   %s   %s", vid_lfb ? "linear" : "banked", snd_adlib ? "AdLib FM" : "no AdLib", sb);
+    sprintf(t, "%s  VESA %s  %s  %s", __DATE__, vid_lfb ? "linear" : "banked", snd_adlib ? "AdLib FM" : "no AdLib", sb);
 }
 
 /* ---------------- handbook ---------------- */

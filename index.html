@@ -21,7 +21,7 @@ a.card b{display:block;color:var(--acc)}a.card span{color:var(--dim);font-size:1
 <h1>Charge! Convergence</h1>
 <p>A game about servicing a CRT monitor, written for DOS on a 486 and running here in a DOS emulator. It includes a slow-motion view that follows the red, green and blue beams from the gun to the atoms of the phosphor.</p>
 <div id="dos"></div>
-<p style="margin-top:10px">Click the screen first so the keys go to the game. It takes a few seconds to start.</p>
+<p style="margin-top:10px">Click the screen first so the keys go to the game. It takes a few seconds to start. <span id="build">Build d934224f, 2026-11-26</span>. The game's title screen shows its build date at the bottom. If the menu has no SLOW MOTION line, you have an old copy: reload the page.</p>
 <table>
 <tr><td>Up, Down, Enter, Esc</td><td>Menus</td></tr>
 <tr><td>Up, Down</td><td>Pick a control (each job shows only the ones it needs)</td></tr>
@@ -42,6 +42,6 @@ a.card b{display:block;color:var(--acc)}a.card span{color:var(--dim);font-size:1
 <script src="play/js-dos.js"></script>
 <script>
 if(location.protocol==='file:')document.getElementById('dos').innerHTML='<p style="padding:20px">The emulator needs a web server. Open this page from the site, or serve this folder over http.</p>';
-else Dos(document.getElementById('dos'),{url:'play/converge.jsdos',pathPrefix:'play/emulators/',kiosk:true,noCloud:true,noNetworking:true,autoStart:true});
+else Dos(document.getElementById('dos'),{url:'play/converge-d934224f.jsdos',pathPrefix:'play/emulators/',kiosk:true,noCloud:true,noNetworking:true,autoStart:true});
 </script>
 </body></html>

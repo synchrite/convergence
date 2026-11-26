@@ -537,3 +537,12 @@ real experience of adjusting convergence.
   clock showing how far time is slowed. Integer physics checked against a
   floating-point prototype.
 - Main page: one short credit line at the foot instead of in the opening text.
+
+## 2026-11-26: the page always loads the current build
+
+- Reported: after the update the page still ran the old program (old music, no
+  slow-motion item). The site had deployed; the browser emulator was reusing
+  the game file it had fetched before, because the file name had not changed.
+- `tools/make_jsdos.py` now names the bundle after its contents
+  (`play/converge-<id>.jsdos`) and writes that name and the build id into
+  `index.html`. The DOS title screen shows the build date.

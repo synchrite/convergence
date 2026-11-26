@@ -29,8 +29,18 @@ c:
 SET BLASTER=A220 I5 D1 T6
 CONVERGE.EXE
 """
-out = root / 'play' / 'converge.jsdos'
+# Each build gets its own file name. A browser, or the emulator's own storage, cannot then serve an old game
+# under the new page: the page names the exact file it wants.
+import hashlib, re, datetime
+exe = (root / 'dos' / 'CONVERGE.EXE').read_bytes()
+tag = hashlib.sha1(exe + CONF.encode()).hexdigest()[:8]
+for old in (root / 'play').glob('converge*.jsdos'): old.unlink()
+out = root / 'play' / ('converge-%s.jsdos' % tag)
 with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:
-    z.writestr('.jsdos/dosbox.conf', CONF)
-    z.write(root / 'dos' / 'CONVERGE.EXE', 'CONVERGE.EXE')
-print('wrote', out, out.stat().st_size, 'bytes')
+    z.writestr(zipfile.ZipInfo('.jsdos/dosbox.conf', (2026, 1, 1, 0, 0, 0)), CONF)
+    z.writestr(zipfile.ZipInfo('CONVERGE.EXE', (2026, 1, 1, 0, 0, 0)), exe, zipfile.ZIP_DEFLATED)
+page = root / 'index.html'; h = page.read_text()
+h2 = re.sub(r"play/converge[-0-9a-f]*\.jsdos", 'play/' + out.name, h)
+h2 = re.sub(r'<span id="build">[^<]*</span>', '<span id="build">Build %s, %s</span>' % (tag, datetime.date.today().isoformat()), h2)
+if h2 != h: page.write_text(h2)
+print('wrote', out, out.stat().st_size, 'bytes; index.html points at it')
